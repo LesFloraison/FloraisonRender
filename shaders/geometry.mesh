@@ -1,0 +1,100 @@
+#version 460
+#extension GL_NV_mesh_shader: require
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout(triangles, max_vertices = 96, max_primitives = 126) out;
+
+taskNV in Task {
+    int beginAT;
+    int vertexSize;
+    float roughness;
+    mat4 M;
+} ms_in;
+
+layout(push_constant) uniform constant
+{
+    float padding[28];
+    mat4 VP;
+    vec2 jitterBias;
+} pushConstant;
+
+layout(binding = 4) readonly buffer Vertices
+{
+	float data[];
+}vertexStream;
+
+layout(location = 0) out BLOCK_OUT{
+    out vec4 fragWPos;
+    out vec2 texCoord;
+    out vec3 gVertexNormal;
+    out vec3 textureIndex;
+    out float roughness;
+} ms_out[];
+
+void main()
+{
+    int referenceOffset = ms_in.beginAT;
+    int endAt = ms_in.beginAT + ms_in.vertexSize;
+
+    int meshIndex = int(gl_WorkGroupID.x);
+    int threadID = int(gl_LocalInvocationID);
+	
+    int vAIndex = referenceOffset + meshIndex * 96 * 11 + (threadID * 3 + 0) * 11;
+    int vBIndex = referenceOffset + meshIndex * 96 * 11 + (threadID * 3 + 1) * 11;
+    int vCIndex = referenceOffset + meshIndex * 96 * 11 + (threadID * 3 + 2) * 11;
+
+	vec3 posA = vec3(vertexStream.data[vAIndex + 0], vertexStream.data[vAIndex + 1], vertexStream.data[vAIndex + 2]);
+    vec3 posB = vec3(vertexStream.data[vBIndex + 0], vertexStream.data[vBIndex + 1], vertexStream.data[vBIndex + 2]);
+    vec3 posC = vec3(vertexStream.data[vCIndex + 0], vertexStream.data[vCIndex + 1], vertexStream.data[vCIndex + 2]);
+
+    vec3 a = (posB - posA).xyz;
+    vec3 b = (posC - posA).xyz;
+    vec3 compNormal = normalize(cross(a,b));
+    vec3 N = normalize(vec3(ms_in.M * vec4(compNormal, 0)));
+
+    vec2 texCoordA = vec2(vertexStream.data[vAIndex + 3], vertexStream.data[vAIndex + 4]);
+    vec2 texCoordB = vec2(vertexStream.data[vBIndex + 3], vertexStream.data[vBIndex + 4]);
+    vec2 texCoordC = vec2(vertexStream.data[vCIndex + 3], vertexStream.data[vCIndex + 4]);
+
+    vec3 textureIndexA = vec3(vertexStream.data[vAIndex + 5], vertexStream.data[vAIndex + 6], vertexStream.data[vAIndex + 7]);
+    vec3 textureIndexB = vec3(vertexStream.data[vBIndex + 5], vertexStream.data[vBIndex + 6], vertexStream.data[vBIndex + 7]);
+    vec3 textureIndexC = vec3(vertexStream.data[vCIndex + 5], vertexStream.data[vCIndex + 6], vertexStream.data[vCIndex + 7]);
+
+	gl_MeshVerticesNV[threadID * 3 + 0].gl_Position = pushConstant.VP * ms_in.M * vec4(posA, 1.0);
+    gl_MeshVerticesNV[threadID * 3 + 1].gl_Position = pushConstant.VP * ms_in.M * vec4(posB, 1.0);
+    gl_MeshVerticesNV[threadID * 3 + 2].gl_Position = pushConstant.VP * ms_in.M * vec4(posC, 1.0);
+
+    gl_MeshVerticesNV[threadID * 3 + 0].gl_Position.xy += pushConstant.jitterBias.xy * gl_MeshVerticesNV[threadID * 3 + 0].gl_Position.w;
+    gl_MeshVerticesNV[threadID * 3 + 1].gl_Position.xy += pushConstant.jitterBias.xy * gl_MeshVerticesNV[threadID * 3 + 1].gl_Position.w;
+    gl_MeshVerticesNV[threadID * 3 + 2].gl_Position.xy += pushConstant.jitterBias.xy * gl_MeshVerticesNV[threadID * 3 + 2].gl_Position.w;
+
+    ms_out[threadID * 3 + 0].fragWPos = ms_in.M * vec4(posA, 1.0);
+    ms_out[threadID * 3 + 0].texCoord = texCoordA;
+    ms_out[threadID * 3 + 0].gVertexNormal = N;
+    ms_out[threadID * 3 + 0].textureIndex = textureIndexA;
+    ms_out[threadID * 3 + 0].roughness = ms_in.roughness;
+
+    ms_out[threadID * 3 + 1].fragWPos = ms_in.M * vec4(posB, 1.0);
+    ms_out[threadID * 3 + 1].texCoord = texCoordB;
+    ms_out[threadID * 3 + 1].gVertexNormal = N;
+    ms_out[threadID * 3 + 1].textureIndex = textureIndexB;
+    ms_out[threadID * 3 + 1].roughness = ms_in.roughness;
+
+    ms_out[threadID * 3 + 2].fragWPos = ms_in.M * vec4(posC, 1.0);
+    ms_out[threadID * 3 + 2].texCoord = texCoordC;
+    ms_out[threadID * 3 + 2].gVertexNormal = N;
+    ms_out[threadID * 3 + 2].textureIndex = textureIndexC;
+    ms_out[threadID * 3 + 2].roughness = ms_in.roughness;
+
+    if(vAIndex >= endAt){
+        gl_MeshVerticesNV[threadID * 3 + 0].gl_Position = vec4(10);
+        gl_MeshVerticesNV[threadID * 3 + 1].gl_Position = vec4(10);
+        gl_MeshVerticesNV[threadID * 3 + 2].gl_Position = vec4(10);
+    }
+
+    gl_PrimitiveIndicesNV[threadID * 3 + 0] = threadID * 3 + 0;
+    gl_PrimitiveIndicesNV[threadID * 3 + 1] = threadID * 3 + 1;
+    gl_PrimitiveIndicesNV[threadID * 3 + 2] = threadID * 3 + 2;
+
+    gl_PrimitiveCountNV = 32;
+}

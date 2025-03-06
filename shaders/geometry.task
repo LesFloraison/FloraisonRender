@@ -1,0 +1,114 @@
+#version 460
+#extension GL_NV_mesh_shader: require
+#extension GL_EXT_ray_query : require
+layout(local_size_x=1) in;
+
+layout(push_constant) uniform constant
+{
+    float[64] data;
+} pushConstant;
+
+layout(binding = 3, set = 0) uniform accelerationStructureEXT tlas;
+
+layout(binding = 5) readonly buffer Instance
+{
+	double data[];
+}instanceStream;
+
+taskNV out Task {
+    int beginAT;
+    int vertexSize;
+    float roughness;
+    mat4 M;
+} ts_out;
+
+int occlusionTest(vec3 origin, vec3 cameraPos);
+
+void main() {
+    vec4 PLANES[6];
+    PLANES[0] = vec4(pushConstant.data[0], pushConstant.data[1], pushConstant.data[2], pushConstant.data[3]);
+    PLANES[1] = vec4(pushConstant.data[4], pushConstant.data[5], pushConstant.data[6], pushConstant.data[7]);
+    PLANES[2] = vec4(pushConstant.data[8], pushConstant.data[9], pushConstant.data[10], pushConstant.data[11]);
+    PLANES[3] = vec4(pushConstant.data[12], pushConstant.data[13], pushConstant.data[14], pushConstant.data[15]);
+    PLANES[4] = vec4(pushConstant.data[16], pushConstant.data[17], pushConstant.data[18], pushConstant.data[19]);
+    PLANES[5] = vec4(pushConstant.data[20], pushConstant.data[21], pushConstant.data[22], pushConstant.data[23]);
+
+    ts_out.beginAT = int(instanceStream.data[gl_WorkGroupID.x * 25]);
+    ts_out.vertexSize = int(instanceStream.data[gl_WorkGroupID.x * 25 + 1]);
+    ts_out.roughness = float(instanceStream.data[gl_WorkGroupID.x * 25 + 2]);
+    ts_out.M = mat4(
+    instanceStream.data[gl_WorkGroupID.x * 25 + 3],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 4],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 5],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 6],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 7],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 8],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 9],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 10],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 11],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 12],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 13],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 14],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 15],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 16],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 17],
+    instanceStream.data[gl_WorkGroupID.x * 25 + 18]);
+
+    vec3 vMin = vec3(instanceStream.data[gl_WorkGroupID.x * 25 + 19], instanceStream.data[gl_WorkGroupID.x * 25 + 20], instanceStream.data[gl_WorkGroupID.x * 25 + 21]);
+    vec3 vMax = vec3(instanceStream.data[gl_WorkGroupID.x * 25 + 22], instanceStream.data[gl_WorkGroupID.x * 25 + 23], instanceStream.data[gl_WorkGroupID.x * 25 + 24]);
+
+    vec3 v[8];
+    v[0] = vec3(ts_out.M * vec4(vMin.x, vMin.y, vMin.z, 1.0));
+    v[1] = vec3(ts_out.M * vec4(vMin.x, vMin.y, vMax.z, 1.0));
+    v[2] = vec3(ts_out.M * vec4(vMin.x, vMax.y, vMin.z, 1.0));
+    v[3] = vec3(ts_out.M * vec4(vMax.x, vMin.y, vMin.z, 1.0));
+    v[4] = vec3(ts_out.M * vec4(vMin.x, vMax.y, vMax.z, 1.0));
+    v[5] = vec3(ts_out.M * vec4(vMax.x, vMax.y, vMin.z, 1.0));
+    v[6] = vec3(ts_out.M * vec4(vMax.x, vMin.y, vMax.z, 1.0));
+    v[7] = vec3(ts_out.M * vec4(vMax.x, vMax.y, vMax.z, 1.0));
+
+    gl_TaskCountNV = int(ceil(ts_out.vertexSize / 11.0f / 3.0f / 32.0f));
+
+    for(int i=0; i<6; i++){
+        int vOutCount = 0;
+        for(int j=0; j<8; j++){
+            if(dot(vec3(PLANES[i]), v[j]) + PLANES[i].w < 0){
+                vOutCount++;
+            }
+        }
+        if(vOutCount == 8){
+            gl_TaskCountNV = 0;
+            break;
+        }
+    }
+
+    vec3 aabbMin = min(min(min(min(min(min(min(v[0],v[1]), v[2]), v[3]), v[4]), v[5]), v[6]), v[7]);
+    vec3 aabbMax = max(max(max(max(max(max(max(v[0],v[1]), v[2]), v[3]), v[4]), v[5]), v[6]), v[7]);
+    vec3 cameraPos = vec3(pushConstant.data[24], pushConstant.data[25], pushConstant.data[26]);
+
+    if(max(cameraPos, aabbMin) == cameraPos && min(cameraPos, aabbMax) == cameraPos){
+        return;
+    }
+
+    //int occuCount = 0;
+    //for(int i=0; i<8; i++){
+    //    if(occlusionTest(v[i], cameraPos) == 1){
+    //        occuCount++;
+    //    }
+    //}
+    //if(occuCount == 8){
+    //    gl_TaskCountNV = 0;
+    //}
+}
+
+int occlusionTest(vec3 origin, vec3 cameraPos){
+    float tMax = distance(cameraPos, origin);
+    rayQueryEXT rayQuery;
+    rayQueryInitializeEXT(rayQuery, tlas, gl_RayFlagsOpaqueEXT | gl_RayFlagsCullFrontFacingTrianglesEXT, 0xFF, origin, 0.0, normalize(cameraPos - origin), tMax);
+    rayQueryProceedEXT(rayQuery);
+    if(rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionNoneEXT){
+        return 0;
+    }else{
+        return 1;
+    }
+}
