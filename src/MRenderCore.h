@@ -2,6 +2,7 @@
 #include "MPipeline.h"
 #include "MScene.h"
 #include "MInterface.h"
+#include "MAudio.h"
 #define GEOMETRY_PASS 0
 #define CACHE_VIEWER_PASS 1
 #define DEFERRED_PASS 2
@@ -22,6 +23,7 @@ class MRenderCore
 public:
 	MScene* scene;
 	MInterface* p_interface;
+	MAudio* audio;
 	objLoader* axis;
 
 	string scenePath;

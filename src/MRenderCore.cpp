@@ -111,10 +111,12 @@ MRenderCore::MRenderCore(string m_scenePath, string m_interfacePath)
 	void* quadVertexData = (void*)QuadVertices;
 	VkDeviceSize quadVertexBufferSize = sizeof(float) * 64;
 	createVertexBuffer(&quadVertexBuffer, &quadVertexBufferMemory, &quadVertexData, quadVertexBufferSize);
+
 	scene = new MScene(m_scenePath);
 	scenePath = m_scenePath;
 	interfacePath = m_interfacePath;
 	p_interface = new MInterface(m_interfacePath);
+	audio = new MAudio(m_scenePath);
 	
 	axis = new objLoader("res/model/axis/axis.obj");
 
@@ -442,6 +444,7 @@ MRenderCore::~MRenderCore()
 
 	delete scene;
 	delete p_interface;
+	delete audio;
 }
 
 void MRenderCore::updateUniform()

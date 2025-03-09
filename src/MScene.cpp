@@ -79,7 +79,7 @@ MScene::MScene(string path)
 				cout << skyboxPath << endl;
 				createSkybox(skyboxPath);
 			}
-			if (line[7] == 'v') {
+			if (line[2] == 'l' && line[7] == 'v') {
 				vector<float> content;
 				string subLine = line;
 				while (subLine.find(',') != string::npos) {
@@ -92,7 +92,7 @@ MScene::MScene(string path)
 				glm::vec3 lightColor = glm::vec3(content[3], content[4], content[5]);
 				setDirectLight(lightVec, lightColor);
 			}
-			if (line[7] == 'p') {
+			if (line[2] == 'l' && line[7] == 'p') {
 				vector<float> content;
 				string subLine = line;
 				while (subLine.find(',') != string::npos) {

@@ -125,6 +125,7 @@ void mainLoop()
 		//cout << lastX << "   " << lastY << endl;
 
 		renderCore->drawFrame();
+		renderCore->audio->audioUpdate();
 	}
 	vkDeviceWaitIdle(device);
 }

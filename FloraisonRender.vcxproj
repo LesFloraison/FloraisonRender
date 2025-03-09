@@ -126,7 +126,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;freetype.lib;OpenAL32.lib;WinMM.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -146,6 +146,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\MAudio.cpp" />
     <ClCompile Include="src\iniLoader.cpp" />
     <ClCompile Include="src\MInterface.cpp" />
     <ClCompile Include="src\MTracer.cpp" />
@@ -164,6 +165,7 @@
     <ClCompile Include="src\VKmain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\MAudio.h" />
     <ClInclude Include="src\iniLoader.h" />
     <ClInclude Include="src\MInterface.h" />
     <ClInclude Include="src\MTracer.h" />
