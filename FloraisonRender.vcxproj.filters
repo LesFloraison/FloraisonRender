@@ -66,6 +66,9 @@
     <ClCompile Include="src\MAudio.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="JSON.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\objLoader.h">
@@ -96,6 +99,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\MAudio.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="JSON.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

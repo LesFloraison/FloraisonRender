@@ -121,6 +121,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -146,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="JSON.cpp" />
     <ClCompile Include="src\MAudio.cpp" />
     <ClCompile Include="src\iniLoader.cpp" />
     <ClCompile Include="src\MInterface.cpp" />
@@ -165,6 +167,7 @@
     <ClCompile Include="src\VKmain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="JSON.h" />
     <ClInclude Include="src\MAudio.h" />
     <ClInclude Include="src\iniLoader.h" />
     <ClInclude Include="src\MInterface.h" />
