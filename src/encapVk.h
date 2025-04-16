@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 #include <map>
-using namespace std;
 
 struct GLFWwindow;
 class MPipeline;
@@ -144,8 +143,8 @@ void createLogicalDevice();
 void createSurface();
 void createSwapChain();
 void createPipelineLayout(VkPipelineLayout* pipelineLayout,VkDescriptorSetLayout descriptorSetLayout);
-void createGraphicsPipeline(VkPipeline* pipeline, string vertPath, string fragPath, VkDescriptorSetLayout descriptorSetLayout, int colorAttachmentCount);
-void createGraphicsPipeline(VkPipeline* pipeline, string vertPath, string geomPath, string fragPath, VkDescriptorSetLayout descriptorSetLayout, int colorAttachmentCount);
+void createGraphicsPipeline(VkPipeline* pipeline, std::string vertPath, std::string fragPath, VkDescriptorSetLayout descriptorSetLayout, int colorAttachmentCount);
+void createGraphicsPipeline(VkPipeline* pipeline, std::string vertPath, std::string geomPath, std::string fragPath, VkDescriptorSetLayout descriptorSetLayout, int colorAttachmentCount);
 void createCommandPool();
 void createCommandBuffer(VkCommandBuffer* commandBuffer);
 void drawFrame();
@@ -167,7 +166,7 @@ void transitionImageLayout(VkImage image, uint32_t mipLevels, VkImageLayout oldL
 void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 void generateMipmaps(VkImage image, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
-void createSkybox(string path);
+void createSkybox(std::string path);
 void transitionImageLayout(VkImage image, uint32_t mipLevels, int layersCount, VkImageLayout oldLayout, VkImageLayout newLayout);
 uint64_t getBufferDeviceAddress(VkBuffer buffer);
 void createBufferWithAddress(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
@@ -182,6 +181,6 @@ void processInput(GLFWwindow* window);
 void cul_mouseDir(glm::vec3* dir);
 void consoleInput();
 void consoleProcess();
-void executeSingle(string executeString);
-void executeScript(string scriptPath);
-void loadConfig(string iniPath);
+void executeSingle(std::string executeString);
+void executeScript(std::string scriptPath);
+void loadConfig(std::string iniPath);

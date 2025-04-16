@@ -19,13 +19,13 @@ MAudio::MAudio(std::string path) {
 			}
 
 			if (line[2] == 'a') {
-				vector<std::string> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
+				std::vector<std::string> content;
+				std::string subLine = line;
+				while (subLine.find(',') != std::string::npos) {
+					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
 					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
+					subLine = subLine.substr(std::min(sub1, sub2));
+					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
 				}
 				std::string audioPath = content[0].substr(1, content[0].size() - 2);
 				glm::vec3 audioPos = glm::vec3(stof(content[1]), stof(content[2]), stof(content[3]));

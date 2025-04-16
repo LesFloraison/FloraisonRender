@@ -5,14 +5,14 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-extern string consoleString;
+extern std::string consoleString;
 int leftDown;
-vector<VkImageView> MInterface::interfaceTextureArrayViews;
-vector<VkImageView> MInterface::fontTextureArrayViews;
+std::vector<VkImageView> MInterface::interfaceTextureArrayViews;
+std::vector<VkImageView> MInterface::fontTextureArrayViews;
 std::vector<int> MInterface::textDisableTable(64);
 int MInterface::page = 0;
 
-MInterface::MInterface(string m_path)
+MInterface::MInterface(std::string m_path)
 {
 	path = m_path;
 	aspectScale = OUTER_WIDTH / 1920.0f;
@@ -35,18 +35,18 @@ void MInterface::loadInterface()
 			}
 
 			if (line[2] == 't') {
-				vector<string> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
+				std::vector<std::string> content;
+				std::string subLine = line;
+				while (subLine.find(',') != std::string::npos) {
+					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
 					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
+					subLine = subLine.substr(std::min(sub1, sub2));
+					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
 					//cout << subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))) << endl;
 				}
-				int textureID = stoi(content[1]);
-				string texturePath = (content[0].substr(1)).substr(0, content[0].size() - 2);
-				cout << texturePath << endl;
+				int textureID = std::stoi(content[1]);
+				std::string texturePath = (content[0].substr(1)).substr(0, content[0].size() - 2);
+				std::cout << texturePath << std::endl;
 				VkImage* textureImage = new VkImage;
 				VkDeviceMemory* textureImageMemory = new VkDeviceMemory;
 				VkImageView* textureImageView = new VkImageView;
@@ -55,25 +55,25 @@ void MInterface::loadInterface()
 			}
 
 			if (line[2] == 'p') {
-				vector<string> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
+				std::vector<std::string> content;
+				std::string subLine = line;
+				while (subLine.find(',') != std::string::npos) {
+					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
 					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
+					subLine = subLine.substr(std::min(sub1, sub2));
+					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
 					//cout << subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))) << endl;
 				}
 				if (content[2] == "\"tile\"") {
-					int page = stoi(content[0]);
-					float layer = 0.9 * (10 - stoi(content[1])) / 10.0f;
-					glm::vec2 minVertex = glm::vec2(stof(content[3]), stof(content[4]));
-					glm::vec2 maxVertex = glm::vec2(stof(content[5]), stof(content[6]));
-					int textureID = stoi(content[7]);
-					int id = content.size() > 10 ? stoi(content[10]) : -1;
+					int page = std::stoi(content[0]);
+					float layer = 0.9 * (10 - std::stoi(content[1])) / 10.0f;
+					glm::vec2 minVertex = glm::vec2(std::stof(content[3]), std::stof(content[4]));
+					glm::vec2 maxVertex = glm::vec2(std::stof(content[5]), std::stof(content[6]));
+					int textureID = std::stoi(content[7]);
+					int id = content.size() > 10 ? std::stoi(content[10]) : -1;
 
-					float rad = stof(content[8]);
-					string executeString = (content[9].substr(1)).substr(0, content[9].size() - 2);
+					float rad = std::stof(content[8]);
+					std::string executeString = (content[9].substr(1)).substr(0, content[9].size() - 2);
 					for (int i = 0; i < 6; i++) {
 						if (i == 0) {
 							interfaceVertexStream.push_back((maxVertex.x + page) * 2 - 1);
@@ -124,14 +124,14 @@ void MInterface::loadInterface()
 						interfaceVertexStream.push_back(0);
 						interfaceVertexStream.push_back(0);
 					}
-					cout << "tile id:" << id << endl;
+					std::cout << "tile id:" << id << std::endl;
 					Tile tmpTile;
 					tmpTile.page = page;
 					tmpTile.minVertex = minVertex;
 					tmpTile.maxVertex = maxVertex;
 					tmpTile.id = id;
-					while (executeString.find("|") != string::npos) {
-						string task = executeString.substr(0, executeString.find("|"));
+					while (executeString.find("|") != std::string::npos) {
+						std::string task = executeString.substr(0, executeString.find("|"));
 						executeString = executeString.substr(executeString.find("|") + 1);
 						//cout << task << endl;
 						//cout << executeString << endl;
@@ -139,30 +139,30 @@ void MInterface::loadInterface()
 					}
 					tmpTile.excuteString.push_back(executeString);
 					//tmpTile.excuteString = executeString;
-					cout << "group:" << tmpTile.excuteString.size() << endl;
+					std::cout << "group:" << tmpTile.excuteString.size() << std::endl;
 					tileList.push_back(tmpTile);
 				}
 			}
 
 
-			if (line.find("\"text\"") != string::npos) {
-				vector<string> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
+			if (line.find("\"text\"") != std::string::npos) {
+				std::vector<std::string> content;
+				std::string subLine = line;
+				while (subLine.find(',') != std::string::npos) {
+					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
 					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
+					subLine = subLine.substr(std::min(sub1, sub2));
+					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
 					//cout << subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))) << endl;
 				}
-				int page = stoi(content[0]);
-				float layer = 0.9 * (10 - stoi(content[1])) / 10.0f;
-				glm::vec2 origin = glm::vec2(stof(content[3]), stof(content[4]));
-				glm::vec3 color = glm::vec3(stof(content[5]), stof(content[6]), stof(content[7]));
-				float scale = stof(content[8]);
+				int page = std::stoi(content[0]);
+				float layer = 0.9 * (10 - std::stoi(content[1])) / 10.0f;
+				glm::vec2 origin = glm::vec2(std::stof(content[3]), std::stof(content[4]));
+				glm::vec3 color = glm::vec3(std::stof(content[5]), std::stof(content[6]), std::stof(content[7]));
+				float scale = std::stof(content[8]);
 				scale *= aspectScale;
-				string textString = (content[9].substr(1)).substr(0, content[9].size() - 2);
-				int flag = stoi(content[10]);
+				std::string textString = (content[9].substr(1)).substr(0, content[9].size() - 2);
+				int flag = std::stoi(content[10]);
 
 				float x = origin.x * OUTER_WIDTH;
 				float y = origin.y * OUTER_HEIGHT;
@@ -367,17 +367,17 @@ void MInterface::loadStateFile() {
 				continue;
 			}
 			if (line[2] == 't') {
-				vector<string> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
+				std::vector<std::string> content;
+				std::string subLine = line;
+				while (subLine.find(',') != std::string::npos) {
+					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
 					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
+					subLine = subLine.substr(std::min(sub1, sub2));
+					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
 					//cout << subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))) << endl;
 				}
-				int id = stoi(content[0]);
-				int state = stoi(content[1]);
+				int id = std::stoi(content[0]);
+				int state = std::stoi(content[1]);
 				for (Tile& tile : tileList) {
 					if (id == tile.id) {
 						executeSingle(tile.excuteString[(state) == 0 ? tile.excuteString.size() - 1 : state - 1]);

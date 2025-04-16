@@ -6,8 +6,8 @@ class MInterface
 {
 public:
 	static int page;
-	static vector<VkImageView> interfaceTextureArrayViews;
-	static vector<VkImageView> fontTextureArrayViews;
+	static std::vector<VkImageView> interfaceTextureArrayViews;
+	static std::vector<VkImageView> fontTextureArrayViews;
 	static std::vector<int> textDisableTable;
 	struct Tile {
 		int page;
@@ -15,9 +15,9 @@ public:
 		int id = -1;
 		glm::vec2 minVertex;
 		glm::vec2 maxVertex;
-		vector<string> excuteString;
+		std::vector<std::string> excuteString;
 	};
-	string path;
+	std::string path;
 	std::vector<float> interfaceVertexStream;
 	std::vector<float> textVertexStream;
 	std::vector<Tile> tileList;
@@ -25,7 +25,7 @@ public:
 	VkDeviceMemory interfaceVertexMemory;
 	VkBuffer textVertexBuffer;
 	VkDeviceMemory textVertexMemory;
-	MInterface(string path);
+	MInterface(std::string path);
 	void drawInterface(VkCommandBuffer commandBuffer, MPipeline* pipeline, VkPipelineLayout pipelineLayout);
 	void executionTrigger();
 	void writeStateFile();
