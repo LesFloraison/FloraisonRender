@@ -66,7 +66,7 @@
     <ClCompile Include="src\MAudio.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="JSON.cpp">
+    <ClCompile Include="src\JSON.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -101,7 +101,7 @@
     <ClInclude Include="src\MAudio.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="JSON.h">
+    <ClInclude Include="src\JSON.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

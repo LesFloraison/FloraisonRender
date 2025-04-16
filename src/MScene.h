@@ -2,6 +2,7 @@
 #include "encapVk.h"
 #include "objLoader.h"
 #include "MObject.h"
+#include "JSON.h"
 class MScene
 {
 public:

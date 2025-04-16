@@ -8,6 +8,14 @@ glm::vec2 jitterBias[4] = {
 	glm::vec2(0.5) * glm::vec2(1.0f / INNER_WIDTH, 1.0 / INNER_HEIGHT) * glm::vec2(-1, 1)
 };
 
+glm::vec2 toVec2(std::vector<float> data) {
+	return glm::vec2(data[0], data[1]);
+}
+
+glm::vec3 toVec3(std::vector<float> data) {
+	return glm::vec3(data[0], data[1], data[2]);
+}
+
 MScene::MScene(string path)
 {
 	lightInfos.push_back(glm::vec3(-1,-1,-1));
@@ -21,93 +29,61 @@ MScene::MScene(string path)
 			if (line[0] == '/') {
 				continue;
 			}
-			if (line[2] == 'p') {
-				string objPath = line.substr(9, line.find(',') - 10);
+			JSON* json = new JSON(line);
+			if (json->key_value.find("type") == json->key_value.end()) {
+				continue;
+			}
+
+			if (json->getValue<std::string>("type") == "res") {
+				string objPath = json->getValue<std::string>("path");
 				objLoader* newOBJ = new objLoader(objPath.c_str());
-				int objKey = stoi(line.substr(line.find(',') + 9, line.length() - line.find(',') - 10));
+				int objKey = json->getValue<int>("index");
 				objMap.insert(std::make_pair(objKey, newOBJ));
 			}
-			if (line[2] == 'd') {
-				vector<float> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(stof(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}')))));
-				}
-				glm::vec3 invDefaultPos = -glm::vec3(content[0], content[1], content[2]);
+			
+			if (json->getValue<std::string>("type") == "defaultcamera") {
+				glm::vec3 invDefaultPos = -toVec3(json->getVector<float>("position"));
 				invCameraPos = invDefaultPos;
 			}
-			if (line[2] == 'o') {
-				vector<float> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(stof(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}')))));
-				}
-				int index = content[0];
-				float roughness = content[10];
+			if (json->getValue<std::string>("type") == "obj") {
+				int index = json->getValue<int>("obj");
+				float roughness = json->getValue<float>("roughness");
 				MObject::Transform objTrans;
-				objTrans.position = glm::vec3(content[1], content[2], content[3]);
-				objTrans.rotate = glm::vec3(content[4], content[5], content[6]);
-				objTrans.scale = glm::vec3(content[7], content[8], content[9]);
+				objTrans.position = toVec3(json->getVector<float>("position"));
+				objTrans.rotate = toVec3(json->getVector<float>("rotate"));
+				objTrans.scale = toVec3(json->getVector<float>("scale"));
 				addObject(objMap[index], objTrans, roughness);
 			}
-			if (line[2] == 'w') {
-				vector<float> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(stof(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}')))));
-				}
+			
+			if (json->getValue<std::string>("type") == "waterlayer") {
 				waterLayerInfo info;
-				info.position = glm::vec3(content[0], content[1], content[2]);
-				info.scale = glm::vec2(content[3], content[4]);
-				info.warpScale_1 = content[5];
-				info.warpScale_2 = content[6];
-				info.flow_1 = glm::vec2(content[7], content[8]);
-				info.flow_2 = glm::vec2(content[9], content[10]);
+				info.position = toVec3(json->getVector<float>("position"));
+				info.scale = toVec2(json->getVector<float>("scale"));
+				info.warpScale_1 = json->getValue<float>("warpscale_1");
+				info.warpScale_2 = json->getValue<float>("warpscale_2");
+				info.flow_1 = toVec2(json->getVector<float>("flow_1"));
+				info.flow_2 = toVec2(json->getVector<float>("flow_2"));
 				waterLayerInfos.push_back(info);
 			}
-			if (line[2] == 's') {
-				string skyboxPath = line.substr(11, line.find('}') - 12);
+			if (json->getValue<std::string>("type") == "skybox") {
+				string skyboxPath = json->getValue<std::string>("path");
 				cout << skyboxPath << endl;
 				createSkybox(skyboxPath);
 			}
-			if (line[2] == 'l' && line[7] == 'v') {
-				vector<float> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(stof(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}')))));
-				}
-				glm::vec3 lightVec = glm::vec3(content[0], content[1], content[2]);
-				glm::vec3 lightColor = glm::vec3(content[3], content[4], content[5]);
+			if (json->getValue<std::string>("type") == "directlight") {
+				glm::vec3 lightVec = toVec3(json->getVector<float>("lightvec"));
+				glm::vec3 lightColor = toVec3(json->getVector<float>("lightcolor"));
 				setDirectLight(lightVec, lightColor);
 			}
-			if (line[2] == 'l' && line[7] == 'p') {
-				vector<float> content;
-				string subLine = line;
-				while (subLine.find(',') != string::npos) {
-					int sub1 = subLine.find(':') == (string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(min(sub1, sub2));
-					content.push_back(stof(subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}')))));
-				}
-				glm::vec3 lightPosition = glm::vec3(content[0], content[1], content[2]);
-				glm::vec3 lightScale = glm::vec3(content[3], content[4], content[5]);
-				glm::vec3 lightColor = glm::vec3(content[6], content[7], content[8]);
-				float lightMaxRad = content[9];
+			if (json->getValue<std::string>("type") == "pointlight") {
+				glm::vec3 lightPosition = toVec3(json->getVector<float>("lightpos"));
+				glm::vec3 lightScale = toVec3(json->getVector<float>("lightscale"));
+				glm::vec3 lightColor = toVec3(json->getVector<float>("lightcolor"));
+				float lightMaxRad = json->getValue<float>("lightmaxrad");
 				cout << lightMaxRad << endl;
 				addPointLight(lightPosition, lightScale, lightColor, lightMaxRad);
 			}
+			delete json;
 		}
 		file.close();
 	}
