@@ -184,3 +184,11 @@ void consoleProcess();
 void executeSingle(std::string executeString);
 void executeScript(std::string scriptPath);
 void loadConfig(std::string iniPath);
+
+inline glm::vec2 toVec2(std::vector<float> data) {
+    return glm::vec2(data[0], data[1]);
+}
+
+inline glm::vec3 toVec3(std::vector<float> data) {
+    return glm::vec3(data[0], data[1], data[2]);
+}

@@ -8,14 +8,6 @@ glm::vec2 jitterBias[4] = {
 	glm::vec2(0.5) * glm::vec2(1.0f / INNER_WIDTH, 1.0 / INNER_HEIGHT) * glm::vec2(-1, 1)
 };
 
-glm::vec2 toVec2(std::vector<float> data) {
-	return glm::vec2(data[0], data[1]);
-}
-
-glm::vec3 toVec3(std::vector<float> data) {
-	return glm::vec3(data[0], data[1], data[2]);
-}
-
 MScene::MScene(string path)
 {
 	lightInfos.push_back(glm::vec3(-1,-1,-1));
@@ -30,7 +22,7 @@ MScene::MScene(string path)
 				continue;
 			}
 			JSON* json = new JSON(line);
-			if (json->key_value.find("type") == json->key_value.end()) {
+			if (!json->exist("type")) {
 				continue;
 			}
 

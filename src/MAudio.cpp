@@ -1,4 +1,5 @@
 #include "MAudio.h"
+#include"JSON.h"
 
 MAudio::MAudio(std::string path) {
 	device = alcOpenDevice(NULL);
@@ -17,20 +18,16 @@ MAudio::MAudio(std::string path) {
 			if (line[0] == '/') {
 				continue;
 			}
+			JSON* json = new JSON(line);
+			if (!json->exist("type")) {
+				continue;
+			}
 
-			if (line[2] == 'a') {
-				std::vector<std::string> content;
-				std::string subLine = line;
-				while (subLine.find(',') != std::string::npos) {
-					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(std::min(sub1, sub2));
-					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
-				}
-				std::string audioPath = content[0].substr(1, content[0].size() - 2);
-				glm::vec3 audioPos = glm::vec3(stof(content[1]), stof(content[2]), stof(content[3]));
-				glm::vec3 axisFollowing = glm::vec3(stof(content[4]), stof(content[5]), stof(content[6]));
-				int looping = stoi(content[7]);
+			if (json->getValue<std::string>("type") == "audio") {
+				std::string audioPath = json->getValue<std::string>("path");
+				glm::vec3 audioPos = toVec3(json->getVector<float>("audiopos"));
+				glm::vec3 axisFollowing = toVec3(json->getVector<float>("axisfollowing"));
+				int looping = json->getValue<int>("looping");
 				loadAudioSource(audioPath, audioPos, axisFollowing, looping);
 			}
 		}

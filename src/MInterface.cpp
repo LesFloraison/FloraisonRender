@@ -3,6 +3,7 @@
 #include "MInterface.h"
 #include "MPipeline.h"
 #include <ft2build.h>
+#include "JSON.h"
 #include FT_FREETYPE_H
 
 extern std::string consoleString;
@@ -34,18 +35,14 @@ void MInterface::loadInterface()
 				continue;
 			}
 
-			if (line[2] == 't') {
-				std::vector<std::string> content;
-				std::string subLine = line;
-				while (subLine.find(',') != std::string::npos) {
-					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(std::min(sub1, sub2));
-					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
-					//cout << subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))) << endl;
-				}
-				int textureID = std::stoi(content[1]);
-				std::string texturePath = (content[0].substr(1)).substr(0, content[0].size() - 2);
+			JSON* json = new JSON(line);
+			if (!json->exist("type")) {
+				continue;
+			}
+
+			if (json->getValue<std::string>("type") == "texture") {
+				int textureID = json->getValue<int>("id");
+				std::string texturePath = json->getValue<std::string>("path");
 				std::cout << texturePath << std::endl;
 				VkImage* textureImage = new VkImage;
 				VkDeviceMemory* textureImageMemory = new VkDeviceMemory;
@@ -54,115 +51,99 @@ void MInterface::loadInterface()
 				interfaceTextureArrayViews.push_back(*textureImageView);
 			}
 
-			if (line[2] == 'p') {
-				std::vector<std::string> content;
-				std::string subLine = line;
-				while (subLine.find(',') != std::string::npos) {
-					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(std::min(sub1, sub2));
-					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
-					//cout << subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))) << endl;
+			if (json->getValue<std::string>("type") == "tile") {
+				int page = json->getValue<int>("page");
+				float layer = 0.9 * (10 - json->getValue<int>("layer")) / 10.0f;
+				glm::vec2 minVertex = toVec2(json->getVector<float>("minvertex"));
+				glm::vec2 maxVertex = toVec2(json->getVector<float>("maxvertex"));
+				int textureID = json->getValue<int>("texture");
+				//int id = json->exist("id") ? json->getValue<int>("id") : -1;
+				int id = -1;
+				if (json->exist("id")) {
+					id = json->getValue<int>("id");
 				}
-				if (content[2] == "\"tile\"") {
-					int page = std::stoi(content[0]);
-					float layer = 0.9 * (10 - std::stoi(content[1])) / 10.0f;
-					glm::vec2 minVertex = glm::vec2(std::stof(content[3]), std::stof(content[4]));
-					glm::vec2 maxVertex = glm::vec2(std::stof(content[5]), std::stof(content[6]));
-					int textureID = std::stoi(content[7]);
-					int id = content.size() > 10 ? std::stoi(content[10]) : -1;
 
-					float rad = std::stof(content[8]);
-					std::string executeString = (content[9].substr(1)).substr(0, content[9].size() - 2);
-					for (int i = 0; i < 6; i++) {
-						if (i == 0) {
-							interfaceVertexStream.push_back((maxVertex.x + page) * 2 - 1);
-							interfaceVertexStream.push_back(maxVertex.y * 2 - 1);
-							interfaceVertexStream.push_back(layer);
-							interfaceVertexStream.push_back(1);
-							interfaceVertexStream.push_back(0);
-						}
-						if (i == 1) {
-							interfaceVertexStream.push_back((maxVertex.x + page) * 2 - 1);
-							interfaceVertexStream.push_back(minVertex.y * 2 - 1);
-							interfaceVertexStream.push_back(layer);
-							interfaceVertexStream.push_back(1);
-							interfaceVertexStream.push_back(1);
-						}
-						if (i == 2) {
-							interfaceVertexStream.push_back((minVertex.x + page) * 2 - 1);
-							interfaceVertexStream.push_back(maxVertex.y * 2 - 1);
-							interfaceVertexStream.push_back(layer);
-							interfaceVertexStream.push_back(0);
-							interfaceVertexStream.push_back(0);
-						}
-						if (i == 3) {
-							interfaceVertexStream.push_back((maxVertex.x + page) * 2 - 1);
-							interfaceVertexStream.push_back(minVertex.y * 2 - 1);
-							interfaceVertexStream.push_back(layer);
-							interfaceVertexStream.push_back(1);
-							interfaceVertexStream.push_back(1);
-						}
-						if (i == 4) {
-							interfaceVertexStream.push_back((minVertex.x + page) * 2 - 1);
-							interfaceVertexStream.push_back(minVertex.y * 2 - 1);
-							interfaceVertexStream.push_back(layer);
-							interfaceVertexStream.push_back(0);
-							interfaceVertexStream.push_back(1);
-						}
-						if (i == 5) {
-							interfaceVertexStream.push_back((minVertex.x + page) * 2 - 1);
-							interfaceVertexStream.push_back((maxVertex.y) * 2 - 1);
-							interfaceVertexStream.push_back(layer);
-							interfaceVertexStream.push_back(0);
-							interfaceVertexStream.push_back(0);
-						}
-						interfaceVertexStream.push_back(textureID);//texID
+				float rad = json->getValue<float>("rad");
+				std::string executeString = json->getValue<std::string>("execute");
+				for (int i = 0; i < 6; i++) {
+					if (i == 0) {
+						interfaceVertexStream.push_back((maxVertex.x + page) * 2 - 1);
+						interfaceVertexStream.push_back(maxVertex.y * 2 - 1);
+						interfaceVertexStream.push_back(layer);
+						interfaceVertexStream.push_back(1);
 						interfaceVertexStream.push_back(0);
-						interfaceVertexStream.push_back(0);
-						interfaceVertexStream.push_back(rad);//style
+					}
+					if (i == 1) {
+						interfaceVertexStream.push_back((maxVertex.x + page) * 2 - 1);
+						interfaceVertexStream.push_back(minVertex.y * 2 - 1);
+						interfaceVertexStream.push_back(layer);
+						interfaceVertexStream.push_back(1);
+						interfaceVertexStream.push_back(1);
+					}
+					if (i == 2) {
+						interfaceVertexStream.push_back((minVertex.x + page) * 2 - 1);
+						interfaceVertexStream.push_back(maxVertex.y * 2 - 1);
+						interfaceVertexStream.push_back(layer);
 						interfaceVertexStream.push_back(0);
 						interfaceVertexStream.push_back(0);
 					}
-					std::cout << "tile id:" << id << std::endl;
-					Tile tmpTile;
-					tmpTile.page = page;
-					tmpTile.minVertex = minVertex;
-					tmpTile.maxVertex = maxVertex;
-					tmpTile.id = id;
-					while (executeString.find("|") != std::string::npos) {
-						std::string task = executeString.substr(0, executeString.find("|"));
-						executeString = executeString.substr(executeString.find("|") + 1);
-						//cout << task << endl;
-						//cout << executeString << endl;
-						tmpTile.excuteString.push_back(task);
+					if (i == 3) {
+						interfaceVertexStream.push_back((maxVertex.x + page) * 2 - 1);
+						interfaceVertexStream.push_back(minVertex.y * 2 - 1);
+						interfaceVertexStream.push_back(layer);
+						interfaceVertexStream.push_back(1);
+						interfaceVertexStream.push_back(1);
 					}
-					tmpTile.excuteString.push_back(executeString);
-					//tmpTile.excuteString = executeString;
-					std::cout << "group:" << tmpTile.excuteString.size() << std::endl;
-					tileList.push_back(tmpTile);
+					if (i == 4) {
+						interfaceVertexStream.push_back((minVertex.x + page) * 2 - 1);
+						interfaceVertexStream.push_back(minVertex.y * 2 - 1);
+						interfaceVertexStream.push_back(layer);
+						interfaceVertexStream.push_back(0);
+						interfaceVertexStream.push_back(1);
+					}
+					if (i == 5) {
+						interfaceVertexStream.push_back((minVertex.x + page) * 2 - 1);
+						interfaceVertexStream.push_back((maxVertex.y) * 2 - 1);
+						interfaceVertexStream.push_back(layer);
+						interfaceVertexStream.push_back(0);
+						interfaceVertexStream.push_back(0);
+					}
+					interfaceVertexStream.push_back(textureID);//texID
+					interfaceVertexStream.push_back(0);
+					interfaceVertexStream.push_back(0);
+					interfaceVertexStream.push_back(rad);//style
+					interfaceVertexStream.push_back(0);
+					interfaceVertexStream.push_back(0);
 				}
+				std::cout << "tile id:" << id << std::endl;
+				Tile tmpTile;
+				tmpTile.page = page;
+				tmpTile.minVertex = minVertex;
+				tmpTile.maxVertex = maxVertex;
+				tmpTile.id = id;
+				while (executeString.find("|") != std::string::npos) {
+					std::string task = executeString.substr(0, executeString.find("|"));
+					executeString = executeString.substr(executeString.find("|") + 1);
+					//std::cout << task << std::endl;
+					//std::cout << executeString << std::endl;
+					tmpTile.excuteString.push_back(task);
+				}
+				tmpTile.excuteString.push_back(executeString);
+				//tmpTile.excuteString = executeString;
+				std::cout << "group:" << tmpTile.excuteString.size() << std::endl;
+				tileList.push_back(tmpTile);
 			}
 
 
-			if (line.find("\"text\"") != std::string::npos) {
-				std::vector<std::string> content;
-				std::string subLine = line;
-				while (subLine.find(',') != std::string::npos) {
-					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(std::min(sub1, sub2));
-					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
-					//cout << subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))) << endl;
-				}
-				int page = std::stoi(content[0]);
-				float layer = 0.9 * (10 - std::stoi(content[1])) / 10.0f;
-				glm::vec2 origin = glm::vec2(std::stof(content[3]), std::stof(content[4]));
-				glm::vec3 color = glm::vec3(std::stof(content[5]), std::stof(content[6]), std::stof(content[7]));
-				float scale = std::stof(content[8]);
+			if (json->getValue<std::string>("type") == "text") {
+				int page = json->getValue<int>("page");
+				float layer = 0.9 * (10 - json->getValue<int>("layer")) / 10.0f;
+				glm::vec2 origin = toVec2(json->getVector<float>("origin"));
+				glm::vec3 color = toVec3(json->getVector<float>("color"));
+				float scale = json->getValue<float>("scale");
 				scale *= aspectScale;
-				std::string textString = (content[9].substr(1)).substr(0, content[9].size() - 2);
-				int flag = std::stoi(content[10]);
+				std::string textString = json->getValue<std::string>("text");
+				int flag = json->getValue<int>("flag");
 
 				float x = origin.x * OUTER_WIDTH;
 				float y = origin.y * OUTER_HEIGHT;
@@ -366,18 +347,13 @@ void MInterface::loadStateFile() {
 			if (line[0] == '/') {
 				continue;
 			}
-			if (line[2] == 't') {
-				std::vector<std::string> content;
-				std::string subLine = line;
-				while (subLine.find(',') != std::string::npos) {
-					int sub1 = subLine.find(':') == (std::string::npos) ? 9999 : (subLine[subLine.find(':') + 1] == '[' ? subLine.find(':') + 2 : subLine.find(':') + 1);
-					int sub2 = subLine[subLine.find(',') + 1] == '"' ? 9999 : subLine.find(',') + 1;
-					subLine = subLine.substr(std::min(sub1, sub2));
-					content.push_back(subLine.substr(0, std::min(std::min(subLine.find(','), subLine.find(']')), subLine.find('}'))));
-					//cout << subLine.substr(0, min(min(subLine.find(','), subLine.find(']')), subLine.find('}'))) << endl;
-				}
-				int id = std::stoi(content[0]);
-				int state = std::stoi(content[1]);
+			JSON* json = new JSON(line);
+			if (!json->exist("type")) {
+				continue;
+			}
+			if (json->getValue<std::string>("type") == "state") {
+				int id = json->getValue<int>("tile_id");
+				int state = json->getValue<int>("state");
 				for (Tile& tile : tileList) {
 					if (id == tile.id) {
 						executeSingle(tile.excuteString[(state) == 0 ? tile.excuteString.size() - 1 : state - 1]);
