@@ -25,6 +25,7 @@
 struct GLFWwindow;
 class MPipeline;
 
+extern const bool enableValidationLayers;
 extern int FULL_SCREEN;
 extern int INNER_WIDTH;
 extern int INNER_HEIGHT;

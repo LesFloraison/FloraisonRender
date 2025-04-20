@@ -139,7 +139,9 @@ void cleanup()
 	
 	vkDestroyDevice(device, nullptr);
 	vkDestroySurfaceKHR(instance, surface, nullptr);
-	vkDestroyDebugUtilsMessengerEXT(instance, callback, nullptr);
+	if (enableValidationLayers) {
+		vkDestroyDebugUtilsMessengerEXT(instance, callback, nullptr);
+	}
 	vkDestroyInstance(instance, nullptr);
 	glfwDestroyWindow(window);
 	glfwTerminate();
