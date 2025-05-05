@@ -3,6 +3,12 @@
 #include "objLoader.h"
 #include "MObject.h"
 #include "JSON.h"
+#include "btBulletDynamicsCommon.h"
+#include "BulletCollision/Gimpact/btGImpactShape.h"
+#include "BulletCollision/CollisionShapes/btTriangleIndexVertexArray.h"
+#include "BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h"
+#include <iostream>
+#include "objLoader.h"
 class MScene
 {
 public:
@@ -34,8 +40,19 @@ public:
 	VkBuffer sceneInstanceBuffer;
 	VkDeviceMemory sceneInstanceMemory;
 	objLoader* waterLayer;
+
+	btBroadphaseInterface* broadphase;
+	btDefaultCollisionConfiguration* collisionConfiguration;
+	btCollisionDispatcher* dispatcher;
+	btSequentialImpulseConstraintSolver* solver;
+	btDiscreteDynamicsWorld* dynamicsWorld;
+	std::vector<btRigidBody*> rigidBodyArr;
+	std::vector<btCollisionShape*> shapeArr;
+	btRigidBody* capsuleRigidBody;
+
 	MScene(string path);
 	~MScene();
+	void sceneUpdate();
 	void addObject(objLoader* m_obj, MObject::Transform m_transformInfo, float roughness);
 	void addPointLight(glm::vec3 lightPosition, glm::vec3 lightScale, glm::vec3 lightColor, float lightMaxRad);
 	void setDirectLight(glm::vec3 lightVec, glm::vec3 lightColor);

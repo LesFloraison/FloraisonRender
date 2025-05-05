@@ -14,6 +14,30 @@ MScene::MScene(string path)
 	lightInfos.push_back(glm::vec3(0));
 	waterLayer = new objLoader("res/model/waterLayer/waterLayer.obj");
 
+	broadphase = new btDbvtBroadphase();
+	collisionConfiguration = new btDefaultCollisionConfiguration();
+	dispatcher = new btCollisionDispatcher(collisionConfiguration);
+	solver = new btSequentialImpulseConstraintSolver();
+	dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+	dynamicsWorld->setGravity(btVector3(0, -10, 0));
+
+	btCollisionShape* capsuleShape = new btCapsuleShape(1, 2);
+
+	btDefaultMotionState* capsuleMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
+
+	btScalar mass = 1;
+	btVector3 inertia(0, 0, 0);
+	capsuleShape->calculateLocalInertia(mass, inertia);
+
+	btRigidBody::btRigidBodyConstructionInfo capsuleRigidBodyCI(mass, capsuleMotionState, capsuleShape, inertia);
+	capsuleRigidBody = new btRigidBody(capsuleRigidBodyCI);
+
+	capsuleRigidBody->setAngularFactor(btVector3(0, 0, 0));
+	capsuleRigidBody->setLinearFactor(btVector3(0, 1, 0));
+
+	dynamicsWorld->addRigidBody(capsuleRigidBody);
+
+
 	std::ifstream file(path);
 	std::string line;
 	if (file.is_open()) {
@@ -45,6 +69,15 @@ MScene::MScene(string path)
 				objTrans.rotate = toVec3(json->getVector<float>("rotate"));
 				objTrans.scale = toVec3(json->getVector<float>("scale"));
 				addObject(objMap[index], objTrans, roughness);
+
+				btCollisionShape* objShape = new btBvhTriangleMeshShape(objMap[index]->triMesh, true);
+				objShape->setLocalScaling(btVector3(objTrans.scale.x, objTrans.scale.y, objTrans.scale.z));
+				btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(objTrans.position.x, objTrans.position.y, objTrans.position.z)));
+				btRigidBody::btRigidBodyConstructionInfo rigidBodyCI(0, motionState, objShape, btVector3(0, 0, 0));
+				btRigidBody* rigidBody = new btRigidBody(rigidBodyCI);
+				dynamicsWorld->addRigidBody(rigidBody);
+				rigidBodyArr.push_back(rigidBody);
+				shapeArr.push_back(objShape);
 			}
 			
 			if (json->getValue<std::string>("type") == "waterlayer") {
@@ -91,7 +124,20 @@ MScene::~MScene()
 	for (const auto& pair : objMap) {
 		delete pair.second;
 	}
+	for (btRigidBody* rb : rigidBodyArr) {
+		dynamicsWorld->removeRigidBody(rb);
+		delete rb->getMotionState();
+		delete rb;
+	}
+	for (btCollisionShape* shape : shapeArr) {
+		delete shape;
+	}
 	objLoader::objReferenceStream.clear();
+	delete dynamicsWorld;
+	delete solver;
+	delete dispatcher;
+	delete collisionConfiguration;
+	delete broadphase;
 }
 
 void MScene::addObject(objLoader* m_obj, MObject::Transform m_transform, float m_roughness)
@@ -183,6 +229,16 @@ void MScene::drawScene(VkCommandBuffer commandBuffer, MPipeline* pipeline, VkPip
 	//cout << jitterBias[currentSubPixel].x << "   " << jitterBias[currentSubPixel].y << endl;
 	vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_ALL, 0, PUSH_CONSTS_SIZE, pushConsts.data());
 	vkCmdDrawMeshTasksNV(commandBuffer, uint32_t(objectList.size()), 0);
+}
+
+void MScene::sceneUpdate()
+{
+	dynamicsWorld->stepSimulation(deltaTime, 10);
+	btTransform trans;
+	capsuleRigidBody->getMotionState()->getWorldTransform(trans);
+	invCameraPos.x = -trans.getOrigin().getX();
+	invCameraPos.y = -trans.getOrigin().getY();
+	invCameraPos.z = -trans.getOrigin().getZ();
 }
 
 void MScene::drawForward(VkCommandBuffer commandBuffer, MPipeline* pipeline, VkPipelineLayout pipelineLayout) {

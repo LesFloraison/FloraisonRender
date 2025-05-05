@@ -8,6 +8,10 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #include <Volk/volk.h>
+#include "btBulletDynamicsCommon.h"
+#include "BulletCollision/Gimpact/btGImpactShape.h"
+#include "BulletCollision/CollisionShapes/btTriangleIndexVertexArray.h"
+#include "BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h"
 using namespace std;
 class objLoader
 {
@@ -46,6 +50,9 @@ public:
 	glm::vec3 aabbMin = glm::vec3(9999);
 	glm::vec3 aabbMax = glm::vec3(-9999);
 	void createBLAS();
+
+	btTriangleMesh* triMesh;
+
 protected:
 	string directory;
 	vector<glm::vec3> vPos;

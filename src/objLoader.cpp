@@ -320,6 +320,14 @@ objLoader::objLoader(const char* path)
 	createVertexBuffer(&vertexPosBuffer, &vertexPosBufferMemory, &vertexPosData, vertexPosBufferSize);
 
 	createBLAS();
+
+	triMesh = new btTriangleMesh();
+	for (size_t i = 0; i + 8 < vertexPosStream.size(); i += 9) {
+		btVector3 v0(vertexPosStream[i], vertexPosStream[i + 1], vertexPosStream[i + 2]);
+		btVector3 v1(vertexPosStream[i + 3], vertexPosStream[i + 4], vertexPosStream[i + 5]);
+		btVector3 v2(vertexPosStream[i + 6], vertexPosStream[i + 7], vertexPosStream[i + 8]);
+		triMesh->addTriangle(v0, v1, v2);
+	}
 }
 
 void objLoader::createBLAS()
@@ -395,4 +403,5 @@ void objLoader::createBLAS()
 
 objLoader::~objLoader()
 {
+	delete triMesh;
 }

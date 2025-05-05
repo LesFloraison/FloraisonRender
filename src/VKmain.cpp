@@ -122,9 +122,9 @@ void mainLoop()
 		glfwPollEvents();
 		processInput(window);
 		consoleProcess();
-		//cout << lastX << "   " << lastY << endl;
 
 		renderCore->drawFrame();
+		renderCore->scene->sceneUpdate();
 		renderCore->audio->audioUpdate();
 	}
 	vkDeviceWaitIdle(device);
