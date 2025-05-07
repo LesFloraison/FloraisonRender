@@ -348,17 +348,12 @@ void MInterface::loadStateFile() {
 				continue;
 			}
 			JSON* json = new JSON(line);
-			if (!json->exist("type")) {
-				continue;
-			}
-			if (json->getValue<std::string>("type") == "state") {
-				int id = json->getValue<int>("tile_id");
-				int state = json->getValue<int>("state");
-				for (Tile& tile : tileList) {
-					if (id == tile.id) {
-						executeSingle(tile.excuteString[(state) == 0 ? tile.excuteString.size() - 1 : state - 1]);
-						tile.state = state;
-					}
+			int id = json->getValue<int>("tile_id");
+			int state = json->getValue<int>("state");
+			for (Tile& tile : tileList) {
+				if (id == tile.id) {
+					executeSingle(tile.excuteString[(state) == 0 ? tile.excuteString.size() - 1 : state - 1]);
+					tile.state = state;
 				}
 			}
 		}
