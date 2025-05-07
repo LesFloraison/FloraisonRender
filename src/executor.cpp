@@ -76,6 +76,10 @@ void executeSingle(std::string executeString) {
 		tracer->traceDecode(tracerPath);
 		tracer->beginExecute();
 	}
+	else if (executeString.find("freecam") == 0) {
+		int camState = stoi(executeString.substr(std::string("freecam").size() + 1));
+		freeCam = camState;
+	}
 	else if (executeString.find("gbuffer") == 0) {
 		int gID = stoi(executeString.substr(std::string("gbuffer").size() + 1));
 		displayID = gID;

@@ -12,6 +12,7 @@ vector<VkDeviceMemory*> MRenderCore::bufferMemoryPool;
 vector<VkPipeline*> MRenderCore::pipelinePool;
 vector<VkAccelerationStructureKHR*> MRenderCore::asPool;
 
+bool freeCam = false;
 glm::vec3 invCameraPos;
 glm::vec3 historicalInvCameraPos;
 glm::vec3 cameraDirection;

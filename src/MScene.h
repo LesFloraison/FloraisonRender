@@ -48,7 +48,33 @@ public:
 	btDiscreteDynamicsWorld* dynamicsWorld;
 	std::vector<btRigidBody*> rigidBodyArr;
 	std::vector<btCollisionShape*> shapeArr;
-	btRigidBody* capsuleRigidBody;
+	btRigidBody* controllerRigidBody;
+	float controllerVelocity = 0;
+	int controllerJumpImpulse = 0;
+	int controllerJumpStreak = 0;
+	int controllerJumpRemain = 0;
+
+	struct MyContactResultCallback : public btCollisionWorld::ContactResultCallback {
+		bool& isGroundedRef;
+		btRigidBody* body;
+
+		MyContactResultCallback(btRigidBody* rb, bool& isGrounded) : isGroundedRef(isGrounded), body(rb) {}
+
+		virtual btScalar addSingleResult(btManifoldPoint& cp,
+			const btCollisionObjectWrapper* colObj0, int partId0, int index0,
+			const btCollisionObjectWrapper* colObj1, int partId1, int index1) override {
+			if (cp.getDistance() < 0.01f) {
+				isGroundedRef = true;
+			}
+			return 0;
+		}
+	};
+
+	inline void checkIfGrounded(btDiscreteDynamicsWorld* world, btRigidBody* capsuleRigidBody, bool& isGrounded) {
+		isGrounded = false;
+		MyContactResultCallback callback(capsuleRigidBody, isGrounded);
+		world->contactTest(capsuleRigidBody, callback);
+	}
 
 	MScene(string path);
 	~MScene();

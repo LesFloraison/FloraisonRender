@@ -8,6 +8,8 @@
 using namespace std;
 int kUp = 1, lUp = 1;
 int nUp = 1, mUp = 1;
+bool spaceUp = 1;
+bool wDown, sDown, aDown, dDown, spaceSignal;
 
 void cul_mouseDir(glm::vec3* dir) {
     if (!MTracer::isTracerActivating && displayID != 16) {
@@ -41,21 +43,34 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 }
 
 void processInput(GLFWwindow* window) {
+    wDown = sDown = aDown = dDown = false;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
     if (!MTracer::isTracerActivating) {
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            invCameraPos = invCameraPos + (-cameraDirection) * deltaTime * cameraSpeed;
+            if (freeCam) {
+                invCameraPos = invCameraPos + (-cameraDirection) * deltaTime * cameraSpeed;
+            }
+            wDown = true;
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            invCameraPos = invCameraPos + cameraDirection * deltaTime * cameraSpeed;
+            if (freeCam) {
+                invCameraPos = invCameraPos + cameraDirection * deltaTime * cameraSpeed;
+            }
+            sDown = true;
         }
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            invCameraPos = invCameraPos + glm::cross(cameraDirection, glm::vec3(0, 1, 0)) * deltaTime * cameraSpeed;
+            if (freeCam) {
+                invCameraPos = invCameraPos + glm::cross(cameraDirection, glm::vec3(0, 1, 0)) * deltaTime * cameraSpeed;
+            }
+            aDown = true;
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            invCameraPos = invCameraPos + -glm::cross(cameraDirection, glm::vec3(0, 1, 0)) * deltaTime * cameraSpeed;
+            if (freeCam) {
+                invCameraPos = invCameraPos + -glm::cross(cameraDirection, glm::vec3(0, 1, 0)) * deltaTime * cameraSpeed;
+            }
+            dDown = true;
         }
     }
 
@@ -86,6 +101,9 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_RELEASE) {
         lUp = 1;
     }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE) {
+        spaceUp = 1;
+    }
 
     if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
         if (kUp == 1) {
@@ -101,6 +119,12 @@ void processInput(GLFWwindow* window) {
             lUp = 0;
             displayID++;
             std::cout << displayID << std::endl;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (spaceUp == 1) {
+            spaceUp = 0;
+            spaceSignal = true;
         }
     }
 

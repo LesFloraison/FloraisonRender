@@ -21,23 +21,6 @@ MScene::MScene(string path)
 	dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
 	dynamicsWorld->setGravity(btVector3(0, -10, 0));
 
-	btCollisionShape* capsuleShape = new btCapsuleShape(1, 2);
-
-	btDefaultMotionState* capsuleMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
-
-	btScalar mass = 1;
-	btVector3 inertia(0, 0, 0);
-	capsuleShape->calculateLocalInertia(mass, inertia);
-
-	btRigidBody::btRigidBodyConstructionInfo capsuleRigidBodyCI(mass, capsuleMotionState, capsuleShape, inertia);
-	capsuleRigidBody = new btRigidBody(capsuleRigidBodyCI);
-
-	capsuleRigidBody->setAngularFactor(btVector3(0, 0, 0));
-	capsuleRigidBody->setLinearFactor(btVector3(0, 1, 0));
-
-	dynamicsWorld->addRigidBody(capsuleRigidBody);
-
-
 	std::ifstream file(path);
 	std::string line;
 	if (file.is_open()) {
@@ -56,7 +39,6 @@ MScene::MScene(string path)
 				int objKey = json->getValue<int>("index");
 				objMap.insert(std::make_pair(objKey, newOBJ));
 			}
-			
 			if (json->getValue<std::string>("type") == "defaultcamera") {
 				glm::vec3 invDefaultPos = -toVec3(json->getVector<float>("position"));
 				invCameraPos = invDefaultPos;
@@ -72,7 +54,9 @@ MScene::MScene(string path)
 
 				btCollisionShape* objShape = new btBvhTriangleMeshShape(objMap[index]->triMesh, true);
 				objShape->setLocalScaling(btVector3(objTrans.scale.x, objTrans.scale.y, objTrans.scale.z));
-				btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(objTrans.position.x, objTrans.position.y, objTrans.position.z)));
+				btQuaternion rotationQuat;
+				rotationQuat.setEulerZYX(objTrans.rotate.z * 3.1416 / 180, objTrans.rotate.y * 3.1416 / 180, objTrans.rotate.x * 3.1416 / 180);
+				btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(rotationQuat, btVector3(objTrans.position.x, objTrans.position.y, objTrans.position.z)));
 				btRigidBody::btRigidBodyConstructionInfo rigidBodyCI(0, motionState, objShape, btVector3(0, 0, 0));
 				btRigidBody* rigidBody = new btRigidBody(rigidBodyCI);
 				dynamicsWorld->addRigidBody(rigidBody);
@@ -108,10 +92,30 @@ MScene::MScene(string path)
 				cout << lightMaxRad << endl;
 				addPointLight(lightPosition, lightScale, lightColor, lightMaxRad);
 			}
+			if (json->getValue<std::string>("type") == "controller") {
+				float velocity = json->getValue<float>("velocity");
+				float jumpImpulse = json->getValue<float>("jumpimpulse");
+				float jumpStreak = json->getValue<float>("jumpstreak");
+				controllerVelocity = velocity;
+				controllerJumpImpulse = jumpImpulse;
+				controllerJumpStreak = jumpStreak;
+			}
 			delete json;
 		}
 		file.close();
 	}
+
+	btCollisionShape* capsuleShape = new btCapsuleShape(0.45, 0.9);
+	btDefaultMotionState* capsuleMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(-invCameraPos.x, -invCameraPos.y, -invCameraPos.z)));
+	btScalar mass = 1;
+	btVector3 inertia(0, 0, 0);
+	capsuleShape->calculateLocalInertia(mass, inertia);
+
+	btRigidBody::btRigidBodyConstructionInfo capsuleRigidBodyCI(mass, capsuleMotionState, capsuleShape, inertia);
+	controllerRigidBody = new btRigidBody(capsuleRigidBodyCI);
+	controllerRigidBody->setActivationState(DISABLE_DEACTIVATION);
+	controllerRigidBody->setAngularFactor(btVector3(0, 0, 0));
+	dynamicsWorld->addRigidBody(controllerRigidBody);
 
 
 	createSceneVertexBuffer();
@@ -233,12 +237,55 @@ void MScene::drawScene(VkCommandBuffer commandBuffer, MPipeline* pipeline, VkPip
 
 void MScene::sceneUpdate()
 {
-	dynamicsWorld->stepSimulation(deltaTime, 10);
+	if (freeCam) {
+		return;
+	}
+	glm::vec3 forwardVec = glm::normalize(glm::vec3(cameraDirection.x, 0, cameraDirection.z));
+	glm::vec3 targetVec = glm::vec3(0);
+	if (wDown) {
+		targetVec.x += forwardVec.x;
+		targetVec.z += forwardVec.z;
+	}
+	if (sDown) {
+		targetVec.x += -forwardVec.x;
+		targetVec.z += -forwardVec.z;
+	}
+	if (aDown) {
+		targetVec.x += forwardVec.z;
+		targetVec.z += -forwardVec.x;
+	}
+	if (dDown) {
+		targetVec.x += -forwardVec.z;
+		targetVec.z += forwardVec.x;
+	}
+	targetVec = targetVec == glm::vec3(0) ? glm::vec3(0) : glm::normalize(targetVec);
+	btVector3 velocity = controllerRigidBody->getLinearVelocity();
+	velocity.setX(targetVec.x * controllerVelocity);
+	velocity.setZ(targetVec.z * controllerVelocity);
+	controllerRigidBody->setLinearVelocity(velocity);
 	btTransform trans;
-	capsuleRigidBody->getMotionState()->getWorldTransform(trans);
+	controllerRigidBody->getMotionState()->getWorldTransform(trans);
 	invCameraPos.x = -trans.getOrigin().getX();
-	invCameraPos.y = -trans.getOrigin().getY();
+	invCameraPos.y = -(trans.getOrigin().getY() + 0.8);
 	invCameraPos.z = -trans.getOrigin().getZ();
+	btVector3 moveForce(500.0f, 0.0f, 0.0f);
+	if (spaceSignal) {
+		spaceSignal = false;
+		bool isGrounded;
+		checkIfGrounded(dynamicsWorld, controllerRigidBody, isGrounded);
+		if (isGrounded) {
+			controllerJumpRemain = controllerJumpStreak;
+		}
+		if (controllerJumpRemain > 0) {
+			controllerJumpRemain--;
+			btVector3 velocity = controllerRigidBody->getLinearVelocity();
+			velocity.setY(0);
+			controllerRigidBody->setLinearVelocity(velocity);
+			btVector3 jumpImpulse(0.0f, controllerJumpImpulse, 0.0f);
+			controllerRigidBody->applyCentralImpulse(jumpImpulse);
+		}
+	}
+	dynamicsWorld->stepSimulation(deltaTime, 10);
 }
 
 void MScene::drawForward(VkCommandBuffer commandBuffer, MPipeline* pipeline, VkPipelineLayout pipelineLayout) {
