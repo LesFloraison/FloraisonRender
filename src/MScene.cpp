@@ -113,6 +113,7 @@ MScene::MScene(string path)
 
 	btRigidBody::btRigidBodyConstructionInfo capsuleRigidBodyCI(mass, capsuleMotionState, capsuleShape, inertia);
 	controllerRigidBody = new btRigidBody(capsuleRigidBodyCI);
+	controllerRigidBody->setFriction(0);
 	controllerRigidBody->setActivationState(DISABLE_DEACTIVATION);
 	controllerRigidBody->setAngularFactor(btVector3(0, 0, 0));
 	dynamicsWorld->addRigidBody(controllerRigidBody);
