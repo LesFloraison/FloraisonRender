@@ -41,6 +41,9 @@ MScene::MScene(string path)
 			}
 			if (json->getValue<std::string>("type") == "defaultcamera") {
 				glm::vec3 invDefaultPos = -toVec3(json->getVector<float>("position"));
+				glm::vec3 rotation = toVec3(json->getVector<float>("rotation"));
+				pitch = rotation.x;
+				yaw = rotation.y;
 				invCameraPos = invDefaultPos;
 			}
 			if (json->getValue<std::string>("type") == "obj") {
@@ -48,14 +51,14 @@ MScene::MScene(string path)
 				float roughness = json->getValue<float>("roughness");
 				MObject::Transform objTrans;
 				objTrans.position = toVec3(json->getVector<float>("position"));
-				objTrans.rotate = toVec3(json->getVector<float>("rotate"));
+				objTrans.rotation = toVec3(json->getVector<float>("rotation"));
 				objTrans.scale = toVec3(json->getVector<float>("scale"));
 				addObject(objMap[index], objTrans, roughness);
 
 				btCollisionShape* objShape = new btBvhTriangleMeshShape(objMap[index]->triMesh, true);
 				objShape->setLocalScaling(btVector3(objTrans.scale.x, objTrans.scale.y, objTrans.scale.z));
 				btQuaternion rotationQuat;
-				rotationQuat.setEulerZYX(objTrans.rotate.z * 3.1416 / 180, objTrans.rotate.y * 3.1416 / 180, objTrans.rotate.x * 3.1416 / 180);
+				rotationQuat.setEulerZYX(objTrans.rotation.z * 3.1416 / 180, objTrans.rotation.y * 3.1416 / 180, objTrans.rotation.x * 3.1416 / 180);
 				btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(rotationQuat, btVector3(objTrans.position.x, objTrans.position.y, objTrans.position.z)));
 				btRigidBody::btRigidBodyConstructionInfo rigidBodyCI(0, motionState, objShape, btVector3(0, 0, 0));
 				btRigidBody* rigidBody = new btRigidBody(rigidBodyCI);

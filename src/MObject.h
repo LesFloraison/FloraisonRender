@@ -14,7 +14,7 @@ public:
 	struct Transform
 	{
 		glm::vec3 position;
-		glm::vec3 rotate;
+		glm::vec3 rotation;
 		glm::vec3 scale;
 	};
 	objLoader* obj;

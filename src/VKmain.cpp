@@ -44,7 +44,8 @@ int SSP = 8;
 int SSP_2 = 20;
 
 float lastX = 400, lastY = 300;
-float pitch, yaw;
+//x -> pitch, y -> yaw
+float pitch = 0, yaw = 0;
 float deltaTime;
 float runingTime;
 float cameraSpeed = 3.0f;
@@ -56,7 +57,7 @@ int currentSubPixel;
 int main() {
 	try
 	{
-		cameraDirection = glm::vec3(2.0f, 2.0f, 2.0f);
+		cameraDirection = glm::vec3(1.0f, 0.0f, 0.0f);
 		initVulkan();
 		mainLoop();
 		renderCore->p_interface->writeStateFile();
