@@ -7,11 +7,13 @@
 
 using namespace std;
 
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
-#else
+//#ifdef NDEBUG
+//const bool enableValidationLayers = false;
+//#else
+//const bool enableValidationLayers = true;
+//#endif
+
 const bool enableValidationLayers = true;
-#endif
 
 VkDebugUtilsMessengerEXT callback;
 VkInstance instance;
@@ -61,7 +63,7 @@ void createInstance()
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "No Engine";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_3;
+	appInfo.apiVersion = VK_API_VERSION_1_4;
 
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
