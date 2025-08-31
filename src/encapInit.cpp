@@ -49,6 +49,7 @@ const std::vector<const char*> deviceExtensions = {
 	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
 	VK_KHR_RAY_QUERY_EXTENSION_NAME,
 	VK_NV_MESH_SHADER_EXTENSION_NAME,
+	VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME
 };
 
 const std::vector<const char*> validationLayers = {
@@ -155,6 +156,11 @@ void createLogicalDevice()
 	deviceFeatures2.features.shaderFloat64 = VK_TRUE;
 	deviceFeatures2.features.fragmentStoresAndAtomics = VK_TRUE;
 	deviceFeatures2.pNext = &feature12;
+
+	VkPhysicalDeviceDescriptorBufferFeaturesEXT descriptorBufferFeatures = {};
+	descriptorBufferFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_FEATURES_EXT;
+	descriptorBufferFeatures.descriptorBuffer = VK_TRUE;
+	descriptorBufferFeatures.pNext = &deviceFeatures2; // Chain the features
 	
 
 	VkDeviceCreateInfo createInfo{};
@@ -164,7 +170,7 @@ void createLogicalDevice()
 	createInfo.pEnabledFeatures = NULL;
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
 	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-	createInfo.pNext = &deviceFeatures2;
+	createInfo.pNext = &descriptorBufferFeatures;
 
 	if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create logical device!");

@@ -10,6 +10,11 @@ public:
 	static VkDescriptorPool universalDescriptorPool;
 	static VkPipelineLayout universalPipelineLayout;
 	static VkDescriptorSetLayout universalDescriptorSetLayout;
+
+	VkBuffer descriptorBuffer;
+	VkDeviceMemory descriptorBufferMemory;
+	void* mappedDescriptorBuffer;
+
 	enum MPipelineType {M_PIPELINE_GENERAL, M_PIPELINE_FRAME0};
 	VkPipeline pipeline;
 	VkBuffer uniformBuffer;
@@ -64,6 +69,7 @@ private:
 	void createSampler();
 	void createUniformBuffer();
 	void createDescriptorSets();
+	void makeDescriptorBuffer();
 	void createColorAttachments();
 	void createGraphicsPipeline();
 };

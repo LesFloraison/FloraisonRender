@@ -171,7 +171,7 @@ void MScene::setDirectLight(glm::vec3 lightVec, glm::vec3 lightColor)
 void MScene::drawScene(VkCommandBuffer commandBuffer, MPipeline* pipeline, VkPipelineLayout pipelineLayout)
 {
 	glm::vec3 cameraPos = -invCameraPos;
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &pipeline->descriptorSets, 0, nullptr);
+	//vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &pipeline->descriptorSets, 0, nullptr);
 	glm::vec4 NDCCoords[8] = {
 		glm::vec4(-1,-1,1,1),
 		glm::vec4(1,-1,1,1),
@@ -294,7 +294,7 @@ void MScene::sceneUpdate()
 
 void MScene::drawForward(VkCommandBuffer commandBuffer, MPipeline* pipeline, VkPipelineLayout pipelineLayout) {
 	uint64_t offsets = 0;
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &pipeline->descriptorSets, 0, nullptr);
+	//vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &pipeline->descriptorSets, 0, nullptr);
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &waterLayer->vertexBuffer, &offsets);
 	for (waterLayerInfo info : waterLayerInfos) {
 		universalPushConst waterLayerPushConst;
@@ -359,7 +359,7 @@ void MScene::createTLAS()
 	accelerationStructureBuildSizesInfo.pNext = nullptr;
 	vkGetAccelerationStructureBuildSizesKHR(device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &accelerationStructureBuildGeometryInfo, &primitive_count, &accelerationStructureBuildSizesInfo);
 
-	createBuffer(accelerationStructureBuildSizesInfo.accelerationStructureSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, TLASBuffer, TLASMemory);
+	createBuffer(accelerationStructureBuildSizesInfo.accelerationStructureSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, TLASBuffer, TLASMemory);
 
 	VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo{};
 	accelerationStructureCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;

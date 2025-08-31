@@ -21,6 +21,8 @@ glm::mat4 lookat;
 glm::mat4 proj;
 glm::mat4 historicalVP;
 
+
+
 float QuadVertices[] = {
 	 1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 0, 0, 0, 0, 0, 0,
 	 1.0f, -1.0f, 0.0f,  1.0f, 0.0f, 0, 0, 0, 0, 0, 0,
@@ -129,7 +131,40 @@ MRenderCore::MRenderCore(string m_scenePath, string m_interfacePath)
 	}
 
 	createDescriptorSetLayout(&MPipeline::universalDescriptorSetLayout);
+
 	createDescriptorPool(&MPipeline::universalDescriptorPool);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	createPipelineLayout(&MPipeline::universalPipelineLayout, MPipeline::universalDescriptorSetLayout);
 
 	createSkybox("res/textures/darkness");
@@ -472,6 +507,12 @@ void MRenderCore::updateUniform()
 
 void MRenderCore::drawFrame()
 {
+	VkDescriptorBufferBindingInfoEXT bindingInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT };
+	bindingInfo.address = getBufferDeviceAddress(skyboxSamplerPipeline->descriptorBuffer);
+	bindingInfo.usage = VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_2_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_2_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
+	uint32_t bufferIndex = 0; // We bound our buffer to index 0
+	VkDeviceSize bufferOffset = 0; // Our data starts at the beginning of the buffer
+
 	updateUniform();
 	p_interface->executionTrigger();
 	uint64_t offsets = 0;
@@ -483,7 +524,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[GEOMETRY_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[GEOMETRY_PASS], &skyboxSamplerPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxSamplerPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &skyboxSamplerPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(skyboxSamplerPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[GEOMETRY_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[GEOMETRY_PASS], 0, 1, &cubeVertexBuffer, &offsets);
 	glm::mat4 P_lookat = proj * lookat;
 	vkCmdPushConstants(*pCmdBuffers[GEOMETRY_PASS], MPipeline::universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, PUSH_CONSTS_SIZE, glm::value_ptr(P_lookat));
@@ -492,7 +535,9 @@ void MRenderCore::drawFrame()
 
 	vkCmdBeginRendering(*pCmdBuffers[GEOMETRY_PASS], &UILayerPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, UILayerPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &UILayerPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(UILayerPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[GEOMETRY_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[GEOMETRY_PASS], 0, 1, &axis->vertexBuffer, &offsets);
 	glm::mat4 UIMVP = proj * lookat * glm::translate(glm::mat4(1), cameraDirection) * glm::translate(glm::mat4(1), glm::vec3(0)) * glm::rotate(glm::mat4(1), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::scale(glm::mat4(1), glm::vec3(0.01));
 	vkCmdPushConstants(*pCmdBuffers[GEOMETRY_PASS], MPipeline::universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, PUSH_CONSTS_SIZE, glm::value_ptr(UIMVP));
@@ -501,6 +546,9 @@ void MRenderCore::drawFrame()
 
 	vkCmdBeginRendering(*pCmdBuffers[GEOMETRY_PASS], &geometryPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, geometryPipeline->pipeline);
+	bindingInfo.address = getBufferDeviceAddress(geometryPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[GEOMETRY_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	scene->drawScene(*pCmdBuffers[GEOMETRY_PASS], geometryPipeline, MPipeline::universalPipelineLayout);
 	vkCmdEndRendering(*pCmdBuffers[GEOMETRY_PASS]);
 	endRecordSubmit(pCmdBuffers[GEOMETRY_PASS], &imageAvailableSemaphores, nullptr);
@@ -510,7 +558,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[CACHE_VIEWER_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[CACHE_VIEWER_PASS], &cacheViewerPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[CACHE_VIEWER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, cacheViewerPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[CACHE_VIEWER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &cacheViewerPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(cacheViewerPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[CACHE_VIEWER_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[CACHE_VIEWER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[CACHE_VIEWER_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	universalPushConst cacheViewerPushConst;
 	cacheViewerPushConst.v4 = glm::vec4(invCameraPos, RADIANCE_CACHE_RAD);
@@ -526,7 +576,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[DEFERRED_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[DEFERRED_PASS], &deferredPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[DEFERRED_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, deferredPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[DEFERRED_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &deferredPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(deferredPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[DEFERRED_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[DEFERRED_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[DEFERRED_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	universalPushConst deferredPushConst;
 	deferredPushConst.v4 = glm::vec4(INNER_WIDTH, INNER_HEIGHT, SSP, SSP_2);
@@ -542,7 +594,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[INJECTOR_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[INJECTOR_PASS], &injectorPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[INJECTOR_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, injectorPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[INJECTOR_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &injectorPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(injectorPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[INJECTOR_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[INJECTOR_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[INJECTOR_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	universalPushConst injectorPushConst;
 	injectorPushConst.v4 = glm::vec4(invCameraPos, RADIANCE_CACHE_RAD);
@@ -558,7 +612,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[PREFILTER_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[PREFILTER_PASS], &preFilterPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[PREFILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, preFilterPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[PREFILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &preFilterPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(preFilterPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[PREFILTER_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[PREFILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[PREFILTER_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	universalPushConst preFilterPushConst;
 	preFilterPushConst.v4 = glm::vec4(INNER_WIDTH, INNER_HEIGHT, RAD, SIG);
@@ -573,7 +629,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[FILTER_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[FILTER_PASS], &filterPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[FILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, filterPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[FILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &filterPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(filterPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[FILTER_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[FILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[FILTER_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	universalPushConst filterPushConst;
 	filterPushConst.v4 = glm::vec4(INNER_WIDTH, INNER_HEIGHT, RAD, SIG);
@@ -590,6 +648,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[FORWARD_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[FORWARD_PASS], &waterLayerPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[FORWARD_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, waterLayerPipeline->pipeline);
+	bindingInfo.address = getBufferDeviceAddress(waterLayerPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[FORWARD_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[FORWARD_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	scene->drawForward(*pCmdBuffers[FORWARD_PASS], waterLayerPipeline, MPipeline::universalPipelineLayout);
 	vkCmdEndRendering(*pCmdBuffers[FORWARD_PASS]);
 	endRecordSubmit(pCmdBuffers[FORWARD_PASS], nullptr, nullptr);
@@ -600,7 +661,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[TAAU_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[TAAU_PASS], &taauPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[TAAU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, taauPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[TAAU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &taauPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(taauPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[TAAU_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[TAAU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[TAAU_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	universalPushConst taauPushConst;
 	taauPushConst.v4 = glm::vec4(INNER_WIDTH, INNER_HEIGHT, currentSubPixel, 0);
@@ -615,7 +678,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[ASSEMBLE_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[ASSEMBLE_PASS], &assemblePipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[ASSEMBLE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, assemblePipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[ASSEMBLE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &assemblePipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(assemblePipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[ASSEMBLE_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[ASSEMBLE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[ASSEMBLE_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	vkCmdDraw(*pCmdBuffers[ASSEMBLE_PASS], 6, 1, 0, 0);
 	vkCmdEndRendering(*pCmdBuffers[ASSEMBLE_PASS]);
@@ -626,7 +691,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[EASU_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[EASU_PASS], &easuPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[EASU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, easuPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[EASU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &easuPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(easuPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[EASU_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[EASU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[EASU_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	universalPushConst easuPushConst;
 	easuPushConst.v4 = glm::vec4(float(INNER_WIDTH) * 2 / float(OUTER_WIDTH), float(INNER_HEIGHT) * 2 / float(OUTER_HEIGHT), 0, 0);
@@ -641,7 +708,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[RCAS_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[RCAS_PASS], &rcasPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[RCAS_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, rcasPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[RCAS_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &rcasPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(rcasPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[RCAS_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[RCAS_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[RCAS_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	universalPushConst pushConst;
 	pushConst.v4 = glm::vec4(SHARPNESS, 0, 0, 0);
@@ -656,7 +725,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[INTERFACEPRE_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[INTERFACEPRE_PASS], &interfacePrePipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[INTERFACEPRE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, interfacePrePipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[INTERFACEPRE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &interfacePrePipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(interfacePrePipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[INTERFACEPRE_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[INTERFACEPRE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[INTERFACEPRE_PASS], 0, 1, &p_interface->interfaceVertexBuffer, &offsets);
 	universalPushConst interfacePrePushConst;
 	interfacePrePushConst.v4 = glm::vec4(OUTER_WIDTH, OUTER_HEIGHT, 20, p_interface->page);
@@ -671,7 +742,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[INTERFACE_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[INTERFACE_PASS], &interfacePipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[INTERFACE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, interfacePipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[INTERFACE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &interfacePipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(interfacePipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[INTERFACE_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[INTERFACE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[INTERFACE_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	vkCmdPushConstants(*pCmdBuffers[INTERFACE_PASS], interfacePipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &interfacePrePushConst);
 	vkCmdDraw(*pCmdBuffers[INTERFACE_PASS], 6, 1, 0, 0);
@@ -683,7 +756,9 @@ void MRenderCore::drawFrame()
 	beginRecord(pCmdBuffers[FONT_PASS]);
 	vkCmdBeginRendering(*pCmdBuffers[FONT_PASS], &fontPipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[FONT_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, fontPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[FONT_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &fontPipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(fontPipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[FONT_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[FONT_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[FONT_PASS], 0, 1, &p_interface->textVertexBuffer, &offsets);
 	std::vector<float> fontPushConst;
 	fontPushConst.push_back(MInterface::page);
@@ -699,7 +774,9 @@ void MRenderCore::drawFrame()
 	frame0Pipeline->updateAttachments(swapChainImageViews[imageIndex]);
 	vkCmdBeginRendering(*pCmdBuffers[FRAME0_PASS], &frame0Pipeline->renderingInfo);
 	vkCmdBindPipeline(*pCmdBuffers[FRAME0_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, frame0Pipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[FRAME0_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &frame0Pipeline->descriptorSets, 0, nullptr);
+	bindingInfo.address = getBufferDeviceAddress(frame0Pipeline->descriptorBuffer);
+	vkCmdBindDescriptorBuffersEXT(*pCmdBuffers[FRAME0_PASS], 1, &bindingInfo);
+	vkCmdSetDescriptorBufferOffsetsEXT(*pCmdBuffers[FRAME0_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &bufferIndex, &bufferOffset);
 	vkCmdBindVertexBuffers(*pCmdBuffers[FRAME0_PASS], 0, 1, &quadVertexBuffer, &offsets);
 	universalPushConst frame0PushConst;
 	frame0PushConst.v4 = glm::vec4(displayID, UIEnable, frame0Pipeline->image2DViews.size(), 0);

@@ -5,6 +5,13 @@ VkDescriptorPool MPipeline::universalDescriptorPool = NULL;
 VkDescriptorSetLayout MPipeline::universalDescriptorSetLayout = NULL;
 VkPipelineLayout MPipeline::universalPipelineLayout = NULL;
 
+void getAndCopyDescriptor(VkDevice device, VkDescriptorGetInfoEXT& getInfo, size_t descriptorSize, void* dest) {
+	// Allocate temporary memory on the stack to hold the raw descriptor
+	char* descriptorData = (char*)alloca(descriptorSize);
+	vkGetDescriptorEXT(device, &getInfo, descriptorSize, descriptorData);
+	memcpy(dest, descriptorData, descriptorSize);
+}
+
 void createPipelineLayout(VkPipelineLayout* pipelineLayout, VkDescriptorSetLayout descriptorSetLayout) {
 	VkPushConstantRange push_constant;
 	push_constant.offset = 0;
@@ -52,7 +59,7 @@ static std::vector<char> readFile(const std::string& filename) {
 
 void MPipeline::createUniformBuffer() {
 	VkDeviceSize bufferSize = UNIFROM_BUFFER_SIZE;
-	createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffer, uniformMemory);
+	createBufferWithAddress(bufferSize, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffer, uniformMemory);
 	MRenderCore::bufferPool.push_back(&uniformBuffer);
 	MRenderCore::bufferMemoryPool.push_back(&uniformMemory);
 	vkMapMemory(device, uniformMemory, 0, bufferSize, 0, &uniformBuffersMapped);
@@ -431,6 +438,7 @@ void MPipeline::createGraphicsPipeline()
 
 	VkGraphicsPipelineCreateInfo pipelineInfo{};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
 	pipelineInfo.stageCount = shaderStages.size();
 	pipelineInfo.pStages = shaderStages.data();
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
@@ -592,6 +600,137 @@ void MPipeline::createPipeline() {
 	renderingInfo.pColorAttachments = colorAttachmentImageInfos.data();
 	renderingInfo.pDepthAttachment = &depthAttachmentInfo;
 
-	createDescriptorSets();
+	//createDescriptorSets();
+	makeDescriptorBuffer();
 	createGraphicsPipeline();
+}
+
+void MPipeline::makeDescriptorBuffer() {
+	for (int i = 0; i < image2DViews.size(); i++) {
+		VkDescriptorImageInfo imageInfo;
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = image2DViews[i];
+		imageInfo.sampler = linearSampler;
+		image2DInfos.push_back(imageInfo);
+	}
+
+	for (int i = 0; i < imageCubeViews.size(); i++) {
+		VkDescriptorImageInfo imageInfo;
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = imageCubeViews[i];
+		imageInfo.sampler = linearSampler;
+		imageCubeInfos.push_back(imageInfo);
+	}
+
+
+	VkDeviceSize descriptorSetLayoutSize;
+	vkGetDescriptorSetLayoutSizeEXT(device, universalDescriptorSetLayout, &descriptorSetLayoutSize);
+	// For this example, let's assume we need one "set"
+	VkDeviceSize bufferSize = descriptorSetLayoutSize;
+
+	createBufferWithAddress(bufferSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, descriptorBuffer, descriptorBufferMemory);
+
+	// Map the buffer for writing
+	vkMapMemory(device, descriptorBufferMemory, 0, bufferSize, 0, &mappedDescriptorBuffer);
+
+
+	VkDescriptorImageInfo image3DInfo_1;
+	image3DInfo_1.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	image3DInfo_1.imageView = indirectCacheView_1;
+	image3DInfo_1.sampler = linearSampler;
+
+	VkDescriptorImageInfo image3DInfo_2;
+	image3DInfo_2.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	image3DInfo_2.imageView = indirectCacheView_2;
+	image3DInfo_2.sampler = linearSampler;
+
+
+
+	VkDeviceSize offset_0_ubo, offset_1_samplers, offset_2_cubemaps, offset_3_tlas;
+	VkDeviceSize offset_4_ssbo1, offset_5_ssbo2, offset_6_storageImg1, offset_7_storageImg2;
+
+	vkGetDescriptorSetLayoutBindingOffsetEXT(device, MPipeline::universalDescriptorSetLayout, 0, &offset_0_ubo);
+	vkGetDescriptorSetLayoutBindingOffsetEXT(device, MPipeline::universalDescriptorSetLayout, 1, &offset_1_samplers);
+	vkGetDescriptorSetLayoutBindingOffsetEXT(device, MPipeline::universalDescriptorSetLayout, 2, &offset_2_cubemaps);
+	vkGetDescriptorSetLayoutBindingOffsetEXT(device, MPipeline::universalDescriptorSetLayout, 3, &offset_3_tlas);
+	vkGetDescriptorSetLayoutBindingOffsetEXT(device, MPipeline::universalDescriptorSetLayout, 4, &offset_4_ssbo1);
+	vkGetDescriptorSetLayoutBindingOffsetEXT(device, MPipeline::universalDescriptorSetLayout, 5, &offset_5_ssbo2);
+	vkGetDescriptorSetLayoutBindingOffsetEXT(device, MPipeline::universalDescriptorSetLayout, 6, &offset_6_storageImg1);
+	vkGetDescriptorSetLayoutBindingOffsetEXT(device, MPipeline::universalDescriptorSetLayout, 7, &offset_7_storageImg2);
+	VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorBufferProps = {};
+	descriptorBufferProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
+	VkPhysicalDeviceProperties2 props = {};
+	props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+	props.pNext = &descriptorBufferProps;
+	vkGetPhysicalDeviceProperties2(physicalDevice, &props);
+	const VkDeviceSize samplerDescriptorSize = descriptorBufferProps.combinedImageSamplerDescriptorSize;
+
+	VkAccelerationStructureDeviceAddressInfoKHR accelerationStructureDeviceAddressInfo{};
+	accelerationStructureDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+	accelerationStructureDeviceAddressInfo.accelerationStructure = *TLAS;
+	VkDeviceAddress tlasAddress = vkGetAccelerationStructureDeviceAddressKHR(device, &accelerationStructureDeviceAddressInfo);
+
+
+
+	char* bufferBase = static_cast<char*>(MPipeline::mappedDescriptorBuffer);
+
+	// --- Binding 0: Uniform Buffer ---
+	VkDescriptorGetInfoEXT getInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT };
+	getInfo.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	VkDescriptorAddressInfoEXT addrInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT };
+	addrInfo.address = getBufferDeviceAddress(uniformBuffer);
+	addrInfo.range = UNIFROM_BUFFER_SIZE;
+	getInfo.data.pUniformBuffer = &addrInfo;
+	getAndCopyDescriptor(device, getInfo, descriptorBufferProps.uniformBufferDescriptorSize, bufferBase + offset_0_ubo);
+
+	// --- Binding 1: Sampler Array (512 elements) ---
+	getInfo.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	for (size_t i = 0; i < image2DInfos.size(); ++i) {
+		getInfo.data.pCombinedImageSampler = &image2DInfos[i];
+
+		void* dest = bufferBase + offset_1_samplers + (i * samplerDescriptorSize);
+		getAndCopyDescriptor(device, getInfo, samplerDescriptorSize, dest);
+	}
+
+	// --- Binding 2: Cubemap Array (512 elements) ---
+	getInfo.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	for (size_t i = 0; i < imageCubeInfos.size(); ++i) {
+		getInfo.data.pCombinedImageSampler = &imageCubeInfos[i];
+
+		void* dest = bufferBase + offset_2_cubemaps + (i * samplerDescriptorSize);
+		getAndCopyDescriptor(device, getInfo, samplerDescriptorSize, dest);
+	}
+
+	// --- Binding 3: Acceleration Structure ---
+	getInfo.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+	//addrInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT, nullptr, tlasAddress, 0 }; // Range is ignored
+	getInfo.data.accelerationStructure = tlasAddress; // Note: this takes a pointer to the address
+	getAndCopyDescriptor(device, getInfo, descriptorBufferProps.accelerationStructureDescriptorSize, bufferBase + offset_3_tlas);
+
+
+	// --- Bindings 4 & 5: Storage Buffers ---
+	getInfo.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	// SSBO 1
+	if (pVertexBuffer != nullptr) {
+		addrInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT, nullptr, getBufferDeviceAddress(*pVertexBuffer), VK_WHOLE_SIZE };
+		getInfo.data.pStorageBuffer = &addrInfo;
+		getAndCopyDescriptor(device, getInfo, descriptorBufferProps.storageBufferDescriptorSize, bufferBase + offset_4_ssbo1);
+	}
+	// SSBO 2
+	if (pStorageBuffer != nullptr) {
+		addrInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT, nullptr, getBufferDeviceAddress(*pStorageBuffer), VK_WHOLE_SIZE };
+		getInfo.data.pStorageBuffer = &addrInfo;
+		getAndCopyDescriptor(device, getInfo, descriptorBufferProps.storageBufferDescriptorSize, bufferBase + offset_5_ssbo2);
+	}
+
+	// --- Bindings 6 & 7: Storage Images ---
+	getInfo.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	VkDescriptorImageInfo storageImageInfo = {};
+	storageImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	// Storage Image 1
+	getInfo.data.pStorageImage = &image3DInfo_1;
+	getAndCopyDescriptor(device, getInfo, descriptorBufferProps.storageImageDescriptorSize, bufferBase + offset_6_storageImg1);
+	// Storage Image 2
+	getInfo.data.pStorageImage = &image3DInfo_2;
+	getAndCopyDescriptor(device, getInfo, descriptorBufferProps.storageImageDescriptorSize, bufferBase + offset_7_storageImg2);
 }
