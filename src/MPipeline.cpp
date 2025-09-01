@@ -6,7 +6,6 @@ VkDescriptorSetLayout MPipeline::universalDescriptorSetLayout = NULL;
 VkPipelineLayout MPipeline::universalPipelineLayout = NULL;
 
 void getAndCopyDescriptor(VkDevice device, VkDescriptorGetInfoEXT& getInfo, size_t descriptorSize, void* dest) {
-	// Allocate temporary memory on the stack to hold the raw descriptor
 	char* descriptorData = (char*)alloca(descriptorSize);
 	vkGetDescriptorEXT(device, &getInfo, descriptorSize, descriptorData);
 	memcpy(dest, descriptorData, descriptorSize);
@@ -625,12 +624,10 @@ void MPipeline::makeDescriptorBuffer() {
 
 	VkDeviceSize descriptorSetLayoutSize;
 	vkGetDescriptorSetLayoutSizeEXT(device, universalDescriptorSetLayout, &descriptorSetLayoutSize);
-	// For this example, let's assume we need one "set"
 	VkDeviceSize bufferSize = descriptorSetLayoutSize;
-
 	createBufferWithAddress(bufferSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, descriptorBuffer, descriptorBufferMemory);
-
-	// Map the buffer for writing
+	MRenderCore::bufferPool.push_back(&descriptorBuffer);
+	MRenderCore::bufferMemoryPool.push_back(&descriptorBufferMemory);
 	vkMapMemory(device, descriptorBufferMemory, 0, bufferSize, 0, &mappedDescriptorBuffer);
 
 
@@ -703,21 +700,23 @@ void MPipeline::makeDescriptorBuffer() {
 
 	// --- Binding 3: Acceleration Structure ---
 	getInfo.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-	//addrInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT, nullptr, tlasAddress, 0 }; // Range is ignored
-	getInfo.data.accelerationStructure = tlasAddress; // Note: this takes a pointer to the address
+	getInfo.data.accelerationStructure = tlasAddress;
 	getAndCopyDescriptor(device, getInfo, descriptorBufferProps.accelerationStructureDescriptorSize, bufferBase + offset_3_tlas);
 
 
 	// --- Bindings 4 & 5: Storage Buffers ---
 	getInfo.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	// SSBO 1
+	VkMemoryRequirements memRequirements;
 	if (pVertexBuffer != nullptr) {
+		vkGetBufferMemoryRequirements(device, *pVertexBuffer, &memRequirements);
 		addrInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT, nullptr, getBufferDeviceAddress(*pVertexBuffer), VK_WHOLE_SIZE };
 		getInfo.data.pStorageBuffer = &addrInfo;
 		getAndCopyDescriptor(device, getInfo, descriptorBufferProps.storageBufferDescriptorSize, bufferBase + offset_4_ssbo1);
 	}
 	// SSBO 2
 	if (pStorageBuffer != nullptr) {
+		vkGetBufferMemoryRequirements(device, *pStorageBuffer, &memRequirements);
 		addrInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT, nullptr, getBufferDeviceAddress(*pStorageBuffer), VK_WHOLE_SIZE };
 		getInfo.data.pStorageBuffer = &addrInfo;
 		getAndCopyDescriptor(device, getInfo, descriptorBufferProps.storageBufferDescriptorSize, bufferBase + offset_5_ssbo2);

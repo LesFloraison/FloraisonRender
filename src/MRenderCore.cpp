@@ -132,38 +132,7 @@ MRenderCore::MRenderCore(string m_scenePath, string m_interfacePath)
 
 	createDescriptorSetLayout(&MPipeline::universalDescriptorSetLayout);
 
-	createDescriptorPool(&MPipeline::universalDescriptorPool);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
+	//createDescriptorPool(&MPipeline::universalDescriptorPool);
 
 	createPipelineLayout(&MPipeline::universalPipelineLayout, MPipeline::universalDescriptorSetLayout);
 
@@ -442,7 +411,7 @@ MRenderCore::~MRenderCore()
 		vkDestroySampler(device, *sampler, nullptr);
 	}
 
-	vkDestroyDescriptorPool(device, MPipeline::universalDescriptorPool, nullptr);
+	//vkDestroyDescriptorPool(device, MPipeline::universalDescriptorPool, nullptr);
 	for (VkBuffer* buffer : MRenderCore::bufferPool) {
 		vkDestroyBuffer(device, *buffer, nullptr);
 	}
