@@ -54,7 +54,7 @@
     <ClCompile Include="src\executor.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\MTracer.cpp">
+    <ClCompile Include="src\MCameraTrack.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\MInterface.cpp">
@@ -89,7 +89,7 @@
     <ClInclude Include="src\MRenderCore.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\MTracer.h">
+    <ClInclude Include="src\MCameraTrack.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\MInterface.h">

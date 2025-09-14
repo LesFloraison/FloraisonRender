@@ -1,4 +1,4 @@
-#include "MTracer.h"
+#include "MCameraTrack.h"
 #include <fstream>
 bool MTracer::isTracerActivating;
 glm::vec3 MTracer::direction;

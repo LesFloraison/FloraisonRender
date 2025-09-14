@@ -155,7 +155,7 @@
     <ClCompile Include="src\MAudio.cpp" />
     <ClCompile Include="src\iniLoader.cpp" />
     <ClCompile Include="src\MInterface.cpp" />
-    <ClCompile Include="src\MTracer.cpp" />
+    <ClCompile Include="src\MCameraTrack.cpp" />
     <ClCompile Include="src\executor.cpp" />
     <ClCompile Include="src\MRenderCore.cpp" />
     <ClCompile Include="src\MObject.cpp" />
@@ -175,7 +175,7 @@
     <ClInclude Include="src\MAudio.h" />
     <ClInclude Include="src\iniLoader.h" />
     <ClInclude Include="src\MInterface.h" />
-    <ClInclude Include="src\MTracer.h" />
+    <ClInclude Include="src\MCameraTrack.h" />
     <ClInclude Include="src\MRenderCore.h" />
     <ClInclude Include="src\MObject.h" />
     <ClInclude Include="src\MScene.h" />

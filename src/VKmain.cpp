@@ -23,7 +23,7 @@
 #include "MScene.h"
 #include "MRenderCore.h"
 #include "MInterface.h"
-#include "MTracer.h"
+#include "MCameraTrack.h"
 #include "iniLoader.h"
 using namespace std;
 
