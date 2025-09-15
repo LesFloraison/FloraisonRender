@@ -451,6 +451,7 @@ MRenderCore::~MRenderCore()
 void MRenderCore::updateUniform()
 {
 	cul_mouseDir(&cameraDirection);
+	//std::cout << invCameraPos.x << ", " << invCameraPos.y << ", " << invCameraPos.z << ", " << std::endl;
 	view = glm::translate(glm::mat4(1), invCameraPos);
 	lookat = glm::lookAt(glm::vec3(0), cameraDirection, glm::vec3(0.0f, 1.0f, 0.0f));
 	proj = glm::perspective(glm::radians(FOV), swapChainExtent.width / (float)swapChainExtent.height, NEAR_PLANE, FAR_PLANE);

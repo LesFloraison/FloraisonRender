@@ -3,7 +3,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-class MTracer
+class MCameraTrack
 {
 private:
 	bool isRecording = false;
@@ -17,7 +17,7 @@ public:
 	std::vector<float> traceStream;
 	std::vector<glm::vec3> tracePositionStream;
 	std::vector<glm::vec3> traceDirectionStream;
-	MTracer();
+	MCameraTrack();
 	void beginRecord(float m_samplingHz, float m_maxSecond, std::string m_path);
 	void endRecord();
 	void traceDecode(std::string m_path);

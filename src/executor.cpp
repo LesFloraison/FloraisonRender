@@ -72,7 +72,7 @@ void executeSingle(std::string executeString) {
 		if (tracerPath.find(";") != std::string::npos) {
 			tracerPath = tracerPath.substr(0, tracerPath.find(";"));
 		}
-		MTracer* tracer = new MTracer();
+		MCameraTrack* tracer = new MCameraTrack();
 		tracer->traceDecode(tracerPath);
 		tracer->beginExecute();
 	}
