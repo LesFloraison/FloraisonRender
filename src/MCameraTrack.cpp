@@ -47,24 +47,22 @@ void MCameraTrack::traceExcuting()
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		glm::vec3 beginPos = -invCameraPos;
 		glm::vec3 stepOffset = tracePositionStream[i] + invCameraPos;
+
+		glm::vec3 beginDirection = cameraDirection;
+		glm::vec3 directionOffset = traceDirectionStream[i] - cameraDirection;
 		while (frameTimeAccu < samplingTime) {
 			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - loopEnd);
-			float C = duration.count() / (samplingTime - frameTimeAccu);
-			C > 1 ? C = 1 : C = C;
+			float C = frameTimeAccu / samplingTime;
 			glm::vec3 newPosition = beginPos + C * stepOffset;
-			std::cout << C<<"," << C << "," << C << "," << std::endl;
 			invCameraPos = -newPosition;
-
-			glm::vec3 directionOffset = traceDirectionStream[i] - cameraDirection;
-			glm::vec3 newDirection = glm::normalize(cameraDirection + C * directionOffset);
+	
+			glm::vec3 newDirection = glm::normalize(beginDirection + C * directionOffset);
 			direction = newDirection;
 
 			frameTimeAccu += duration.count();
 			loopEnd = std::chrono::high_resolution_clock::now();
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
-		std::cout << "   " << std::endl;
-		//invCameraPos = tracePositionStream[i];
 	}
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
