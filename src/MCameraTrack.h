@@ -12,8 +12,9 @@ private:
 public:
 	float samplingHz;
 	int maxSecond;
-	static bool isTracerActivating;
-	static glm::vec3 direction;
+	static bool isTracking;
+	static glm::vec3 MCTcameraDirection;
+	static glm::vec3 MCTinvCameraPos;
 	std::vector<float> traceStream;
 	std::vector<glm::vec3> tracePositionStream;
 	std::vector<glm::vec3> traceDirectionStream;

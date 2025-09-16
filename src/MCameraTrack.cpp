@@ -1,7 +1,8 @@
 #include "MCameraTrack.h"
 #include <fstream>
-bool MCameraTrack::isTracerActivating;
-glm::vec3 MCameraTrack::direction;
+bool MCameraTrack::isTracking;
+glm::vec3 MCameraTrack::MCTcameraDirection;
+glm::vec3 MCameraTrack::MCTinvCameraPos;
 void MCameraTrack::traceSampling(float m_samplingHz, float m_maxSecond, std::string m_path)
 {
 	glm::vec3 curPosition = -invCameraPos;
@@ -38,26 +39,26 @@ void MCameraTrack::traceExcuting()
 {
 	freeCam = true;
 	auto start = std::chrono::high_resolution_clock::now();
-	invCameraPos = -tracePositionStream[0];
-	cameraDirection = traceDirectionStream[0];
+	MCTinvCameraPos = -tracePositionStream[0];
+	MCTcameraDirection = traceDirectionStream[0];
 	float samplingTime = 1000 / samplingHz;
 	for (int i = 0; i < tracePositionStream.size(); i++) {
 		float frameTimeAccu = 0;
 		auto loopEnd = std::chrono::high_resolution_clock::now();
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		glm::vec3 beginPos = -invCameraPos;
-		glm::vec3 stepOffset = tracePositionStream[i] + invCameraPos;
+		glm::vec3 beginPos = -MCTinvCameraPos;
+		glm::vec3 stepOffset = tracePositionStream[i] + MCTinvCameraPos;
 
-		glm::vec3 beginDirection = cameraDirection;
-		glm::vec3 directionOffset = traceDirectionStream[i] - cameraDirection;
+		glm::vec3 beginDirection = MCTcameraDirection;
+		glm::vec3 directionOffset = traceDirectionStream[i] - MCTcameraDirection;
 		while (frameTimeAccu < samplingTime) {
 			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - loopEnd);
 			float C = frameTimeAccu / samplingTime;
 			glm::vec3 newPosition = beginPos + C * stepOffset;
-			invCameraPos = -newPosition;
+			MCTinvCameraPos = -newPosition;
 	
 			glm::vec3 newDirection = glm::normalize(beginDirection + C * directionOffset);
-			direction = newDirection;
+			MCTcameraDirection = newDirection;
 
 			frameTimeAccu += duration.count();
 			loopEnd = std::chrono::high_resolution_clock::now();
@@ -67,7 +68,7 @@ void MCameraTrack::traceExcuting()
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
 	std::cout << "Time: " << duration.count() << "s" << std::endl;
-	isTracerActivating = false;
+	isTracking = false;
 	freeCam = false;
 }
 
@@ -108,7 +109,7 @@ void MCameraTrack::traceDecode(std::string m_path)
 
 void MCameraTrack::beginExecute()
 {
-	isTracerActivating = true;
+	isTracking = true;
 	std::thread traceExcutingThread(&MCameraTrack::traceExcuting, this);
 	traceExcutingThread.detach();
 }

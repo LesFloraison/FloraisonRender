@@ -12,16 +12,10 @@ bool spaceUp = 1;
 bool wDown, sDown, aDown, dDown, spaceSignal;
 
 void cul_mouseDir(glm::vec3* dir) {
-    if (!MCameraTrack::isTracerActivating && displayID != 16) {
+    if (!MCameraTrack::isTracking && displayID != 16) {
         (*(dir)).x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
         (*(dir)).y = sin(glm::radians(pitch));
         (*(dir)).z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
-    }
-    else if (!MCameraTrack::isTracerActivating && displayID == 16) {
-        //do nothing
-    }
-    else {
-        *dir = MCameraTrack::direction;
     }
 }
 
@@ -47,7 +41,7 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
-    if (!MCameraTrack::isTracerActivating) {
+    if (!MCameraTrack::isTracking) {
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             if (freeCam) {
                 invCameraPos = invCameraPos + (-cameraDirection) * deltaTime * cameraSpeed;
