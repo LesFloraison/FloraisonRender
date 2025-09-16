@@ -90,7 +90,7 @@ void initVulkan()
 	createSurface();
 	createCommandPool();
 	createSyncObjects();
-
+	printHardWareInfo();
 	//renderCore = new MRenderCore("scenes/sanMiguelScene.txt");
 	//renderCore = new MRenderCore("scenes/sponzaScene.txt");
 	//renderCore->buildRenderCore();

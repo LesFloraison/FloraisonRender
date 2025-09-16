@@ -4,6 +4,8 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <intrin.h>
+#include <array>
 
 using namespace std;
 
@@ -258,4 +260,46 @@ void createSyncObjects()
 	if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create synchronization objects for a frame!");
 	}
+}
+
+void printHardWareInfo() {
+	std::array<int, 4> cpuInfo;
+	char cpuBrandString[0x41];
+	memset(cpuBrandString, 0, sizeof(cpuBrandString));
+
+	for (unsigned int i = 0x80000002; i <= 0x80000004; ++i) {
+		__cpuid(cpuInfo.data(), i);
+		memcpy(cpuBrandString + (i - 0x80000002) * 16, cpuInfo.data(), 16);
+	}
+
+	std::cout << "CPU Model: " << cpuBrandString << std::endl;
+
+	MEMORYSTATUSEX statex;
+	statex.dwLength = sizeof(statex);
+
+	if (GlobalMemoryStatusEx(&statex)) {
+		std::cout << "Total Physical Memory: "
+			<< statex.ullTotalPhys / (1024 * 1024)
+			<< " MB" << std::endl;
+	}
+	else {
+		std::cerr << "Failed to retrieve memory information." << std::endl;
+	}
+
+
+	VkPhysicalDeviceProperties deviceProperties;
+	vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+	std::cout << "GPU: " << deviceProperties.deviceName << std::endl;
+
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+	VkDeviceSize vramSize = 0;
+	for (uint32_t i = 0; i < memProperties.memoryHeapCount; ++i) {
+		if (memProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+			vramSize += memProperties.memoryHeaps[i].size;
+		}
+	}
+	std::cout << "VRAM Size: " << vramSize / (1024 * 1024) << " MB" << std::endl;
+
 }

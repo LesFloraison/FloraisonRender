@@ -187,6 +187,7 @@ void consoleProcess();
 void executeSingle(std::string executeString);
 void executeScript(std::string scriptPath);
 void loadConfig(std::string iniPath);
+void printHardWareInfo();
 
 inline glm::vec2 toVec2(std::vector<float> data) {
     return glm::vec2(data[0], data[1]);
