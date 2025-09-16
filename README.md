@@ -22,7 +22,7 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 对于每个像素以随机采样的方式查询自身与区域光源的的可见度，与 RTGI Pass 共同进行时空降噪，实现高质量软阴影
 
-
+![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/RTSS.png)
 
 ## 漫反射无限次反弹/辐照度缓存 (Radiance Cache)
 
