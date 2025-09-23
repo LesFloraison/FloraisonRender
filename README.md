@@ -10,7 +10,7 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 重写顶点着色阶段，使用 TaskShader + MeshShader 替换传统顶点+细分+几何着色器，对静态顶点合批，实现前期的精细图元剔除（视锥剔除 + 深度剔除），大幅降低 DrawCall 开销
 
-
+![](https://raw.githubusercontent.com/LesFloraison/imgRepo/refs/heads/master/demo_img/gpu_driven.png)
 
 ## 光线追踪全局光照 (RTGI)
 
@@ -47,6 +47,12 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 ![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/EASU_RCAS.png)
 
 
+
+## 视觉正确的水体
+
+基于查询先前流程所渲染的结果，实现具备反射与折射，符合菲涅尔效应的水体。可根据场景自由调节水体流速与方向，总体实现视觉上可接受的流体效果。
+
+![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/WaterLayer.png)
 
 ## 定制化 UI
 
