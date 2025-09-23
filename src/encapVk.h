@@ -39,6 +39,7 @@ extern float CHUNK_SIZE;
 extern int SSP;
 extern int SSP_2;
 
+extern bool restartSignal;
 extern bool freeCam;
 extern bool wDown, sDown, aDown, dDown, spaceSignal;
 extern float lastX, lastY;

@@ -63,6 +63,10 @@ int main() {
 		renderCore->p_interface->writeStateFile();
 		executeSingle("save_config");
 		cleanup();
+		if (restartSignal) {
+			restartSignal = false;
+			main();
+		}
 	}
 	catch (runtime_error e)
 	{

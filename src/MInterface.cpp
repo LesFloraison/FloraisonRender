@@ -8,6 +8,7 @@
 
 extern std::string consoleString;
 int leftDown;
+bool restartSignal = false;
 std::vector<VkImageView> MInterface::interfaceTextureArrayViews;
 std::vector<VkImageView> MInterface::fontTextureArrayViews;
 std::vector<int> MInterface::textDisableTable(64);
@@ -115,7 +116,7 @@ void MInterface::loadInterface()
 					interfaceVertexStream.push_back(0);
 					interfaceVertexStream.push_back(0);
 				}
-				std::cout << "tile id:" << id << std::endl;
+				//std::cout << "tile id:" << id << std::endl;
 				Tile tmpTile;
 				tmpTile.page = page;
 				tmpTile.minVertex = minVertex;
@@ -130,7 +131,7 @@ void MInterface::loadInterface()
 				}
 				tmpTile.excuteString.push_back(executeString);
 				//tmpTile.excuteString = executeString;
-				std::cout << "group:" << tmpTile.excuteString.size() << std::endl;
+				//std::cout << "group:" << tmpTile.excuteString.size() << std::endl;
 				tileList.push_back(tmpTile);
 			}
 
@@ -334,6 +335,23 @@ void MInterface::writeStateFile() {
 	}
 	outfile << stateContent;
 	outfile.close();
+}
+
+void MInterface::RestartCheck() {
+	std::string stateContent = std::string();
+	for (Tile& tile : tileList) {
+		if (tile.id != -1) {
+			stateContent += std::string("{\"tile_id\":") + std::to_string(tile.id) + std::string(",\"state\":") + std::to_string(tile.state) + std::string("}\n");
+		}
+	}
+	std::ifstream file("res/interface/state.txt");
+	std::ostringstream buffer;
+	buffer << file.rdbuf();
+	std::string fileContent = buffer.str();
+	if (fileContent != stateContent) {
+		glfwSetWindowShouldClose(window, true);
+		restartSignal = true;
+	}
 }
 
 void MInterface::loadStateFile() {

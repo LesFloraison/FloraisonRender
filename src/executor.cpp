@@ -107,6 +107,9 @@ void executeSingle(std::string executeString) {
 	else if (executeString.find("write_interface_state") == 0) {
 		renderCore->p_interface->writeStateFile();
 	}
+	else if (executeString.find("restart_check") == 0) {
+		renderCore->p_interface->RestartCheck();
+	}
 	else if (executeString.find("config_full_screen") == 0) {
 		int full_screen = stoi(executeString.substr(std::string("config_full_screen").size() + 1));
 		iniLoader::editKey(&globalConfig, "general", "full_screen", std::to_string(full_screen));

@@ -29,6 +29,7 @@ public:
 	void drawInterface(VkCommandBuffer commandBuffer, MPipeline* pipeline, VkPipelineLayout pipelineLayout);
 	void executionTrigger();
 	void writeStateFile();
+	void RestartCheck();
 	void loadStateFile();
 
 	struct Character {
