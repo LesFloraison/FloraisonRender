@@ -1,5 +1,7 @@
 #include "MCameraTrack.h"
 #include <fstream>
+#include <algorithm>
+#include <numeric>
 bool MCameraTrack::isTracking;
 glm::vec3 MCameraTrack::MCTcameraDirection;
 glm::vec3 MCameraTrack::MCTinvCameraPos;
@@ -37,6 +39,7 @@ void MCameraTrack::traceSampling(float m_samplingHz, float m_maxSecond, std::str
 
 void MCameraTrack::traceExcuting()
 {
+	std::vector<float> deltaTimeVec;
 	freeCam = true;
 	auto start = std::chrono::high_resolution_clock::now();
 	MCTinvCameraPos = -tracePositionStream[0];
@@ -62,14 +65,47 @@ void MCameraTrack::traceExcuting()
 
 			frameTimeAccu += duration.count();
 			loopEnd = std::chrono::high_resolution_clock::now();
+			deltaTimeVec.push_back(deltaTime);
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 	}
+	int low1size = deltaTimeVec.size() / 100;
+	std::sort(deltaTimeVec.begin(), deltaTimeVec.end(),std::greater<float>());
+	float low1FrameTime = std::accumulate(deltaTimeVec.begin(), deltaTimeVec.begin() + low1size, 0.0) / low1size;
+	float avgFrameTime = std::accumulate(deltaTimeVec.begin(), deltaTimeVec.end(), 0.0) / deltaTimeVec.size();
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-	std::cout << "Time: " << duration.count() << "s" << std::endl;
+
+	std::string benchmarkInfo = std::string("----------Hardware Info----------\n");
+	benchmarkInfo += getHardWareInfo() + std::string("\n");
+	benchmarkInfo += std::string("\n");
+
+	benchmarkInfo += std::string("----------Settings----------\n");
+	benchmarkInfo += std::string("Full Screen: ") + (FULL_SCREEN ? std::string("On") : std::string("Off")) + std::string("\n");
+	benchmarkInfo += std::string("Resolution: ") + std::to_string(OUTER_WIDTH) + std::string("x") + std::to_string(OUTER_HEIGHT) + std::string("\n");
+	benchmarkInfo += std::string("Inner Resolution: ") + std::to_string(INNER_WIDTH) + std::string("x") + std::to_string(INNER_HEIGHT) + std::string("\n");
+	benchmarkInfo += std::string("FOV: ") + std::to_string(FOV) + std::string("\n");
+	benchmarkInfo += std::string("RADIANCE_CACHE_RAD: ") + std::to_string(RADIANCE_CACHE_RAD) + std::string("\n");
+	benchmarkInfo += std::string("Infinity Diffuse: ") + (debugVal ? std::string("On") : std::string("Off")) + std::string("\n");
+	benchmarkInfo += std::string("RTGI SSP: ") + std::to_string(SSP) + std::string("\n");
+	benchmarkInfo += std::string("Secondary SSP: ") + std::to_string(SSP_2) + std::string("\n");
+	benchmarkInfo += std::string("\n");
+
+	benchmarkInfo += std::string("----------Benchmark Result----------\n");
+	benchmarkInfo += std::string("Time: ") + std::to_string(duration.count()) + std::string("s\n");
+	benchmarkInfo += std::string("Avg FrameTime : ") + std::to_string(avgFrameTime * 1000) + std::string("ms\n");
+	benchmarkInfo += std::string("Avg Fps: ") + std::to_string(1.0 / avgFrameTime) + std::string("\n");
+	benchmarkInfo += std::string("Low1 % Frame Time : ") + std::to_string(low1FrameTime * 1000) + std::string("ms\n");
+	benchmarkInfo += std::string("Low1% Fps: ") + std::to_string(1.0 / low1FrameTime) + std::string("\n");
+	benchmarkInfo += std::string("\n");
+
+	std::ofstream outfile("res/benchmarkInfo.txt");
+	outfile << benchmarkInfo;
+	outfile.close();
+	std::cout << benchmarkInfo << std::endl;
 	isTracking = false;
 	freeCam = false;
+	displayID = 16;
 }
 
 MCameraTrack::MCameraTrack()

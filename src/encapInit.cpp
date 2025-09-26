@@ -262,7 +262,8 @@ void createSyncObjects()
 	}
 }
 
-void printHardWareInfo() {
+std::string getHardWareInfo() {
+	std::string hardwareInfo;
 	std::array<int, 4> cpuInfo;
 	char cpuBrandString[0x41];
 	memset(cpuBrandString, 0, sizeof(cpuBrandString));
@@ -271,16 +272,13 @@ void printHardWareInfo() {
 		__cpuid(cpuInfo.data(), i);
 		memcpy(cpuBrandString + (i - 0x80000002) * 16, cpuInfo.data(), 16);
 	}
-
-	std::cout << "CPU Model: " << cpuBrandString << std::endl;
+	hardwareInfo += std::string("CPU Model: ") + cpuBrandString + std::string("\n");
 
 	MEMORYSTATUSEX statex;
 	statex.dwLength = sizeof(statex);
 
 	if (GlobalMemoryStatusEx(&statex)) {
-		std::cout << "Total Physical Memory: "
-			<< statex.ullTotalPhys / (1024 * 1024)
-			<< " MB" << std::endl;
+		hardwareInfo += std::string("RAM Size: ") + std::to_string(statex.ullTotalPhys / (1024 * 1024)) + std::string(" MB\n");
 	}
 	else {
 		std::cerr << "Failed to retrieve memory information." << std::endl;
@@ -289,7 +287,7 @@ void printHardWareInfo() {
 
 	VkPhysicalDeviceProperties deviceProperties;
 	vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
-	std::cout << "GPU: " << deviceProperties.deviceName << std::endl;
+	hardwareInfo += std::string("GPU Model: ") + deviceProperties.deviceName + std::string("\n");
 
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
@@ -300,6 +298,6 @@ void printHardWareInfo() {
 			vramSize += memProperties.memoryHeaps[i].size;
 		}
 	}
-	std::cout << "VRAM Size: " << vramSize / (1024 * 1024) << " MB" << std::endl;
-
+	hardwareInfo += std::string("VRAM Size: ") + std::to_string(vramSize / (1024 * 1024)) + std::string(" MB");
+	return hardwareInfo;
 }

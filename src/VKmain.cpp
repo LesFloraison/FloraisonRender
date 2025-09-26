@@ -42,6 +42,7 @@ int RADIANCE_CACHE_RAD = 512;
 float CHUNK_SIZE = 102.4f;
 int SSP = 8;
 int SSP_2 = 20;
+int FSR = 1;
 
 float lastX = 400, lastY = 300;
 //x -> pitch, y -> yaw
@@ -94,7 +95,6 @@ void initVulkan()
 	createSurface();
 	createCommandPool();
 	createSyncObjects();
-	printHardWareInfo();
 	//renderCore = new MRenderCore("scenes/sanMiguelScene.txt");
 	//renderCore = new MRenderCore("scenes/sponzaScene.txt");
 	//renderCore->buildRenderCore();

@@ -38,6 +38,7 @@ extern int RADIANCE_CACHE_RAD;
 extern float CHUNK_SIZE;
 extern int SSP;
 extern int SSP_2;
+extern int FSR;
 
 extern bool restartSignal;
 extern bool freeCam;
@@ -188,7 +189,7 @@ void consoleProcess();
 void executeSingle(std::string executeString);
 void executeScript(std::string scriptPath);
 void loadConfig(std::string iniPath);
-void printHardWareInfo();
+std::string getHardWareInfo();
 
 inline glm::vec2 toVec2(std::vector<float> data) {
     return glm::vec2(data[0], data[1]);

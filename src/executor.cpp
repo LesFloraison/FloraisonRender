@@ -67,8 +67,8 @@ void executeSingle(std::string executeString) {
 		}
 		validation.close();
 	}
-	else if (executeString.find("tracer") == 0) {
-		std::string tracerPath = executeString.substr(std::string("tracer").size() + 1);
+	else if (executeString.find("camera_track") == 0) {
+		std::string tracerPath = executeString.substr(std::string("camera_track").size() + 1);
 		if (tracerPath.find(";") != std::string::npos) {
 			tracerPath = tracerPath.substr(0, tracerPath.find(";"));
 		}
@@ -154,6 +154,10 @@ void executeSingle(std::string executeString) {
 		int ssp_2 = stoi(executeString.substr(std::string("config_ssp_2").size() + 1));
 		iniLoader::editKey(&globalConfig, "graphic", "ssp_2", std::to_string(ssp_2));
 	}
+	else if (executeString.find("config_fsr") == 0) {
+		int fsr = stoi(executeString.substr(std::string("config_fsr").size() + 1));
+		iniLoader::editKey(&globalConfig, "graphic", "fsr", std::to_string(fsr));
+	}
 	else if (executeString.find("save_config") == 0) {
 		iniLoader::writeIni(globalConfig, "res/config/cfg.ini");
 	}
@@ -189,18 +193,20 @@ void executeScript(std::string scriptPath) {
 
 void loadConfig(std::string iniPath) {
 	iniLoader::loadIni(&globalConfig, iniPath);
-	FULL_SCREEN = stoi(iniLoader::readKey(globalConfig, "general", "full_screen"));
-	OUTER_WIDTH = stoi(iniLoader::readKey(globalConfig, "general", "outer_width"));
-	OUTER_HEIGHT = stoi(iniLoader::readKey(globalConfig, "general", "outer_height"));
-	INNER_WIDTH = stoi(iniLoader::readKey(globalConfig, "general", "inner_width"));
-	INNER_HEIGHT = stoi(iniLoader::readKey(globalConfig, "general", "inner_height"));
-	NEAR_PLANE = stof(iniLoader::readKey(globalConfig, "general", "near_plane"));
-	FAR_PLANE = stof(iniLoader::readKey(globalConfig, "general", "far_plane"));
-	FOV = stof(iniLoader::readKey(globalConfig, "general", "fov"));
-
 	RADIANCE_CACHE_RAD = stoi(iniLoader::readKey(globalConfig, "graphic", "radiance_cache_rad"));
 	SSP = stoi(iniLoader::readKey(globalConfig, "graphic", "ssp_1"));
 	SSP_2 = stoi(iniLoader::readKey(globalConfig, "graphic", "ssp_2"));
+	FSR = stoi(iniLoader::readKey(globalConfig, "graphic", "fsr"));
 	UIEnable = stoi(iniLoader::readKey(globalConfig, "graphic", "taau"));
 	debugVal = stoi(iniLoader::readKey(globalConfig, "graphic", "inf_diffuse"));
+
+
+	FULL_SCREEN = stoi(iniLoader::readKey(globalConfig, "general", "full_screen"));
+	OUTER_WIDTH = stoi(iniLoader::readKey(globalConfig, "general", "outer_width"));
+	OUTER_HEIGHT = stoi(iniLoader::readKey(globalConfig, "general", "outer_height"));
+	INNER_WIDTH = FSR ? OUTER_WIDTH / 2.5 : OUTER_WIDTH / 2;
+	INNER_HEIGHT = FSR ? OUTER_HEIGHT / 2.5 : OUTER_HEIGHT / 2;
+	NEAR_PLANE = stof(iniLoader::readKey(globalConfig, "general", "near_plane"));
+	FAR_PLANE = stof(iniLoader::readKey(globalConfig, "general", "far_plane"));
+	FOV = stof(iniLoader::readKey(globalConfig, "general", "fov"));
 }
