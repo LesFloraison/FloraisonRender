@@ -122,12 +122,13 @@ void mainLoop()
 		runingTime += deltaTime;
 		lastFrame = glfwGetTime();
 		string glTitle = "Vulkan   Fps:" + string(cframe) + "    Pos(" + to_string(-invCameraPos.x) + " , " + to_string(-invCameraPos.y) + " , " + to_string(-invCameraPos.z) + ")";
-		glfwSetWindowTitle(window, glTitle.c_str());
-
 		glfwPollEvents();
 		processInput(window);
 		consoleProcess();
-
+		if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
+			continue;
+		}
+		glfwSetWindowTitle(window, glTitle.c_str());
 		renderCore->drawFrame();
 		renderCore->scene->sceneUpdate();
 		renderCore->audio->audioUpdate();
