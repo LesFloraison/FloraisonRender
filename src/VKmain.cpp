@@ -120,11 +120,11 @@ void mainLoop()
 		}
 		deltaTime = glfwGetTime() - lastFrame;
 		runingTime += deltaTime;
-		lastFrame = glfwGetTime();
 		string glTitle = "Vulkan   Fps:" + string(cframe) + "    Pos(" + to_string(-invCameraPos.x) + " , " + to_string(-invCameraPos.y) + " , " + to_string(-invCameraPos.z) + ")";
 		glfwPollEvents();
 		processInput(window);
 		consoleProcess();
+		lastFrame = glfwGetTime();
 		if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
 			continue;
 		}

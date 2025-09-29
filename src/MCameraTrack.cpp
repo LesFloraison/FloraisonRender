@@ -45,6 +45,7 @@ void MCameraTrack::traceExcuting()
 	MCTinvCameraPos = -tracePositionStream[0];
 	MCTcameraDirection = traceDirectionStream[0];
 	float samplingTime = 1000 / samplingHz;
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	for (int i = 0; i < tracePositionStream.size(); i++) {
 		float frameTimeAccu = 0;
 		auto loopEnd = std::chrono::high_resolution_clock::now();
@@ -62,7 +63,6 @@ void MCameraTrack::traceExcuting()
 	
 			glm::vec3 newDirection = glm::normalize(beginDirection + C * directionOffset);
 			MCTcameraDirection = newDirection;
-
 			frameTimeAccu += duration.count();
 			loopEnd = std::chrono::high_resolution_clock::now();
 			deltaTimeVec.push_back(deltaTime);

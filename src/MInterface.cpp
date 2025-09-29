@@ -249,10 +249,13 @@ void MInterface::executionTrigger()
 		float yPos = lastY / OUTER_HEIGHT;
 		for (Tile &tile : tileList) {
 			if (xPos > tile.minVertex.x && yPos > tile.minVertex.y && xPos < tile.maxVertex.x && yPos < tile.maxVertex.y && page == tile.page) {
-				tile.state++;
-				tile.state %= tile.excuteString.size();
+				if (tile.excuteString[tile.state].find("//") != std::string::npos || tile.excuteString[tile.state] == "") {
+					continue;
+				}
 				// execution may contain destructor, do not directly call
 				consoleString = tile.excuteString[tile.state];
+				tile.state++;
+				tile.state %= tile.excuteString.size();
 			}
 		}
 	}
