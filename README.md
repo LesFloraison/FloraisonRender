@@ -20,7 +20,7 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 ## 光线追踪软阴影
 
-对于每个像素以随机采样的方式查询自身与区域光源的的可见度，与 RTGI Pass 共同进行时空降噪，实现高质量软阴影
+对于每个像素以随机采样的方式查询自身与区域光源的的可见度，与 RTGI Pass 共同进行时空降噪，实现高质量软阴影。
 
 ![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/RTSS.png)
 
@@ -54,11 +54,19 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 ![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/WaterLayer.png)
 
-## 定制化 UI
+## 定制化 UI 界面
 
 JSON 文件加载 UI 定义、渲染 UI 元素（包括纹理、交互式按钮和文本），处理交互以及维护 UI 状态持久性。
 
 ![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/UI.png)
+
+
+
+## 标准化性能测试
+
+为当前图形设置在默认场景(Sponza)之上提供标准化性能测试，生成包含硬件信息与 Low1%，Avg及帧生成时间等测试结果的性能报告以协助调试。
+
+![](https://raw.githubusercontent.com/LesFloraison/imgRepo/refs/heads/master/demo_img/benchmark.png)
 
 
 
