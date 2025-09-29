@@ -249,9 +249,10 @@ void MInterface::executionTrigger()
 		float yPos = lastY / OUTER_HEIGHT;
 		for (Tile &tile : tileList) {
 			if (xPos > tile.minVertex.x && yPos > tile.minVertex.y && xPos < tile.maxVertex.x && yPos < tile.maxVertex.y && page == tile.page) {
-				executeSingle(tile.excuteString[tile.state]);
 				tile.state++;
 				tile.state %= tile.excuteString.size();
+				// execution may contain destructor, do not directly call
+				consoleString = tile.excuteString[tile.state];
 			}
 		}
 	}
