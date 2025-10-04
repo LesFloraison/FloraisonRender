@@ -95,7 +95,7 @@ void MCameraTrack::traceExcuting()
 	benchmarkInfo += std::string("Time: ") + std::to_string(duration.count()) + std::string("s\n");
 	benchmarkInfo += std::string("Avg FrameTime : ") + std::to_string(avgFrameTime * 1000) + std::string("ms\n");
 	benchmarkInfo += std::string("Avg Fps: ") + std::to_string(1.0 / avgFrameTime) + std::string("\n");
-	benchmarkInfo += std::string("Low1 % Frame Time : ") + std::to_string(low1FrameTime * 1000) + std::string("ms\n");
+	benchmarkInfo += std::string("Low1 % FrameTime : ") + std::to_string(low1FrameTime * 1000) + std::string("ms\n");
 	benchmarkInfo += std::string("Low1% Fps: ") + std::to_string(1.0 / low1FrameTime) + std::string("\n");
 	benchmarkInfo += std::string("\n");
 
