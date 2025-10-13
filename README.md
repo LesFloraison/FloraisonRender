@@ -56,7 +56,7 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 ## 定制化 UI 界面
 
-JSON 文件加载 UI 定义、渲染 UI 元素（包括纹理、交互式按钮和文本），处理交互以及维护 UI 状态持久性。
+从 JSON 文件中加载 UI 定义、渲染 UI 元素（包括纹理、交互式按钮和文本），处理交互以及维护 UI 状态持久性。
 
 ![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/UI.png)
 
@@ -72,7 +72,9 @@ JSON 文件加载 UI 定义、渲染 UI 元素（包括纹理、交互式按钮�
 
 ## 场景序列化
 
-以 JSON 序列存储场景，处理包括物理，光源，HDR天空盒，音频，模型信息等有关参数
+借由 [GitHub - LesFloraison/tscn-converter](https://github.com/LesFloraison/tscn-converter) 将由 Godot 所创建的场景文件（*.tscn）转化为 JSON 序列以定义场景，储存包括物理，光源，HDR天空盒，音频，模型信息等有关参数。
+
+![](https://raw.githubusercontent.com/LesFloraison/imgRepo/refs/heads/master/demo_img/SceneSerialization.png)
 
 
 
