@@ -52,7 +52,7 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 基于查询先前流程所渲染的结果，实现具备反射与折射，符合菲涅尔效应的水体。可根据场景自由调节水体流速与方向，总体实现视觉上可接受的流体效果。
 
-![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/Water2.png)
+![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/Water.png)
 
 ## 定制化 UI 界面
 
