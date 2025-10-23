@@ -10,25 +10,25 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 重写顶点着色阶段，使用 TaskShader + MeshShader 替换传统顶点+细分+几何着色器，对静态顶点合批，实现前期的精细图元剔除（视锥剔除 + 深度剔除），大幅降低 DrawCall 开销
 
-![](https://raw.githubusercontent.com/LesFloraison/imgRepo/refs/heads/master/demo_img/gpu_driven.png)
+![](https://img.floraison.io/gpu_driven.png)
 
 ## 光线追踪全局光照 (RTGI)
 
 建立加速结构并以光线查询 (RayQuery / inline RayTracing) 在片元着色器中查询遮挡或交点辐照度，对每像素在世界空间中以随机采样的方式做辐照度的半球积分，并根据启发式方法做空间滤波和时域积累以实现可接受的降噪效果。
 
-![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/RTGI.png)
+![](https://img.floraison.io/RTGI.png)
 
 ## 光线追踪软阴影
 
 对于每个像素以随机采样的方式查询自身与区域光源的的可见度，与 RTGI Pass 共同进行时空降噪，实现高质量软阴影。
 
-![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/RTSS.png)
+![](https://img.floraison.io/RTSS.png)
 
 ## 漫反射无限次反弹/辐照度缓存 (Radiance Cache)
 
 使用分层体素缓存辐照度，相较于GIBS表面贴花方案，省略持久化储存surfel的启发策略，无需构建查询surfel的空间加速结构。当光线查询得到的交点命中辐照度缓存，便终止继续查询。反之则在查询后写入辐照度缓存。此项可极大提高光线追踪的查询效率，同时实现对于漫反射的无限次光线反弹。
 
-![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/inf_bounce.png)
+![](https://img.floraison.io/inf_bounce.png)
 
 
 
@@ -36,7 +36,7 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 为抵消光线查询所造成的开销，渲染器默认以半分辨率（四分之一像素量）进行渲染，每帧为投影矩阵添加一个微小的抖动 (jitter) 来更新每组中的下一个像素，在帧生成时间较低的情况下造成的延迟可以忽略不计。由于画面由原生半分辨率合成得到，硬件纹理过滤效果有限，但总体在可接受范围。
 
-![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/TAAU.png)
+![](https://img.floraison.io/TAAU.png)
 
 
 
@@ -44,7 +44,7 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 完整复现AMD的单帧自适应锐化方案FSR1.0。边缘适应空间上采样 + 对比度适应锐化。整体观感稍强于硬件双线性插值。
 
-![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/EASU_RCAS.png)
+![](https://img.floraison.io/EASU_RCAS.png)
 
 
 
@@ -52,13 +52,13 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 基于查询先前流程所渲染的结果，实现具备反射与折射，符合菲涅尔效应的水体。可根据场景自由调节水体流速与方向，总体实现视觉上可接受的流体效果。
 
-![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/Water.png)
+![](https://img.floraison.io/Water.png)
 
 ## 定制化 UI 界面
 
 从 JSON 文件中加载 UI 定义、渲染 UI 元素（包括纹理、交互式按钮和文本），处理交互以及维护 UI 状态持久性。
 
-![](https://raw.githubusercontent.com/floraison-io/imgRepo/refs/heads/master/demo_img/UI.png)
+![](https://img.floraison.io/UI.png)
 
 
 
@@ -66,7 +66,7 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 为当前图形设置在默认场景(Sponza)之上提供标准化性能测试，生成包含硬件信息与 Low1%，Avg及帧生成时间等测试结果的性能报告以协助调试。
 
-![](https://raw.githubusercontent.com/LesFloraison/imgRepo/refs/heads/master/demo_img/benchmark.png)
+![](https://img.floraison.io/benchmark.png)
 
 
 
@@ -74,7 +74,7 @@ FloraisonRender 是基于 C++ 17 / Vulkan 构建的现代渲染器，提供高�
 
 借由 [GitHub - LesFloraison/tscn-converter](https://github.com/LesFloraison/tscn-converter) 将由 Godot 所创建的场景文件（*.tscn）转化为 JSON 序列以定义场景，储存包括物理，光源，HDR天空盒，音频，模型信息等有关参数。
 
-![](https://raw.githubusercontent.com/LesFloraison/imgRepo/refs/heads/master/demo_img/SceneSerialization.png)
+![](https://img.floraison.io/SceneSerialization.png)
 
 
 
