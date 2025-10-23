@@ -22,9 +22,9 @@ void executeSingle(std::string executeString) {
 	else if (executeString.find("exit") == 0) {
 		glfwSetWindowShouldClose(window, true);
 	}
-	else if (executeString.find("curse_mode") == 0) {
-		int curseMode = stoi(executeString.substr(std::string("curse_mode").size() + 1));
-		if (curseMode == 0) {
+	else if (executeString.find("cursor_mode") == 0) {
+		int cursorMode = stoi(executeString.substr(std::string("cursor_mode").size() + 1));
+		if (cursorMode == 0) {
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		}
 		else {
