@@ -266,8 +266,6 @@ void MPipeline::createGraphicsPipeline()
 	VkShaderModule meshShaderModule = NULL;
 	if (meshPath == "") {
 		string vertSpvPath = "spv" + vertPath.substr(vertPath.find_last_of('/'), vertPath.length() - vertPath.find_last_of('/') - 5) + "Vert.spv";
-		string compileVertCmd = validatorPath + " -V " + vertPath + " -o " + vertSpvPath;
-		system(compileVertCmd.data());
 		auto vertShaderCode = readFile(vertSpvPath);
 		vertShaderModule = createShaderModule(vertShaderCode);
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
@@ -279,8 +277,6 @@ void MPipeline::createGraphicsPipeline()
 
 		if (geomPath != "") {
 			string geomSpvPath = "spv" + vertPath.substr(vertPath.find_last_of('/'), vertPath.length() - vertPath.find_last_of('/') - 5) + "Geom.spv";
-			string compileGeomCmd = validatorPath + " -V " + geomPath + " -o " + geomSpvPath;
-			system(compileGeomCmd.data());
 			auto geomShaderCode = readFile(geomSpvPath);
 			geomShaderModule = createShaderModule(geomShaderCode);
 			VkPipelineShaderStageCreateInfo geomShaderStageInfo{};
@@ -293,8 +289,6 @@ void MPipeline::createGraphicsPipeline()
 	}
 	else {
 		string taskSpvPath = "spv" + taskPath.substr(taskPath.find_last_of('/'), taskPath.length() - taskPath.find_last_of('/') - 5) + "Task.spv";
-		string compiletaskCmd = validatorPath + " -V " + taskPath + " -o " + taskSpvPath;
-		system(compiletaskCmd.data());
 		auto taskShaderCode = readFile(taskSpvPath);
 		taskShaderModule = createShaderModule(taskShaderCode);
 		VkPipelineShaderStageCreateInfo taskShaderStageInfo{};
@@ -305,8 +299,6 @@ void MPipeline::createGraphicsPipeline()
 		shaderStages.push_back(taskShaderStageInfo);
 
 		string meshSpvPath = "spv" + meshPath.substr(meshPath.find_last_of('/'), meshPath.length() - meshPath.find_last_of('/') - 5) + "Mesh.spv";
-		string compilemeshCmd = validatorPath + " -V " + meshPath + " -o " + meshSpvPath;
-		system(compilemeshCmd.data());
 		auto meshShaderCode = readFile(meshSpvPath);
 		meshShaderModule = createShaderModule(meshShaderCode);
 		VkPipelineShaderStageCreateInfo meshShaderStageInfo{};
@@ -318,8 +310,6 @@ void MPipeline::createGraphicsPipeline()
 	}
 
 	string fragSpvPath = "spv" + fragPath.substr(fragPath.find_last_of('/'), fragPath.length() - fragPath.find_last_of('/') - 5) + "Frag.spv";
-	string compileFragCmd = validatorPath + " -V " + fragPath + " -o " + fragSpvPath;
-	system(compileFragCmd.data());
 	auto fragShaderCode = readFile(fragSpvPath);
 	VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
@@ -566,6 +556,28 @@ void MPipeline::updateAttachments(VkImageView curSwapchainView) {
 	renderingInfo.pDepthAttachment = &depthAttachmentInfo;
 }
 
+void MPipeline::shaderRecompile(std::string shaderPath)
+{
+	char absPath[4096] = { 0 };
+	_fullpath(absPath, "bin", 4096);
+	string validatorPath = absPath + string("/glslangValidator.exe");
+	
+	for (const auto& entry : filesystem::recursive_directory_iterator(shaderPath)) {
+		if (filesystem::is_regular_file(entry)) {
+			std::string glslPath = entry.path().string();
+			std::string ext = entry.path().extension().string();
+
+			if (!ext.empty() && ext[0] == '.') {
+				ext.erase(0, 1);
+				ext[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(ext[0])));
+			}
+			string spvPath = "spv" + glslPath.substr(glslPath.find_last_of('\\'), glslPath.length() - glslPath.find_last_of('\\') - 5) + ext + ".spv";
+			string compileCmd = validatorPath + " -V " + glslPath + " -o " + spvPath;
+			system(compileCmd.data());
+		}
+	}
+}
+
 void MPipeline::createPipeline() {
 	if (pipelineType == M_PIPELINE_GENERAL) {
 		createColorAttachments();
@@ -575,7 +587,7 @@ void MPipeline::createPipeline() {
 		createImageView(&depthView, depthImage, 1, VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT);
 	}
 	else {
-		cout << "happppppppe" << endl;
+		//cout << "happppppppe" << endl;
 	}
 	depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
 	depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL_KHR;

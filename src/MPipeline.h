@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
+#include <cctype>
 class MPipeline
 {
 public:
@@ -35,6 +37,7 @@ public:
 	MPipeline(std::string m_vertPath, std::string m_geomPath, std::string m_fragPath, int m_colorAttachmentCount);
 	MPipeline(int padding, std::string m_taskPath, std::string m_meshPath, std::string m_fragPath, int m_colorAttachmentCount);
 	void updateAttachments(VkImageView curSwapchainView);
+	static void shaderRecompile(std::string shaderPath);
 
 	//TODO
 	MPipelineType pipelineType;

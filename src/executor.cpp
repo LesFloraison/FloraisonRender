@@ -161,6 +161,9 @@ void executeSingle(std::string executeString) {
 	else if (executeString.find("save_config") == 0) {
 		iniLoader::writeIni(globalConfig, "res/config/cfg.ini");
 	}
+	else if (executeString.find("shader_recompile") == 0) {
+		MPipeline::shaderRecompile("shaders");
+	}
 	else {
 		cout << "unknow execution " << "\"" << (executeString.find(";") == std::string::npos ? executeString : executeString.substr(0,executeString.find(";"))) << "\"" << endl;
 	}
