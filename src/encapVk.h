@@ -63,7 +63,6 @@ extern glm::mat4 historicalVP;
 extern VkSemaphore imageAvailableSemaphores;
 
 extern VkCommandPool commandPool;
-extern std::vector<VkCommandBuffer*> pCmdBuffers;
 
 extern VkDebugUtilsMessengerEXT callback;
 extern VkInstance instance;

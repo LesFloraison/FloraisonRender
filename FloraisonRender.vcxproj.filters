@@ -51,6 +51,9 @@
     <ClCompile Include="src\MRenderCore.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="src\MRenderPass.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="src\executor.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -87,6 +90,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\MRenderCore.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MRenderPass.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\MCameraTrack.h">

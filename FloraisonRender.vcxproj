@@ -158,6 +158,7 @@
     <ClCompile Include="src\MCameraTrack.cpp" />
     <ClCompile Include="src\executor.cpp" />
     <ClCompile Include="src\MRenderCore.cpp" />
+    <ClCompile Include="src\MRenderPass.cpp" />
     <ClCompile Include="src\MObject.cpp" />
     <ClCompile Include="src\MScene.cpp" />
     <ClCompile Include="src\MPipeline.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="src\MInterface.h" />
     <ClInclude Include="src\MCameraTrack.h" />
     <ClInclude Include="src\MRenderCore.h" />
+    <ClInclude Include="src\MRenderPass.h" />
     <ClInclude Include="src\MObject.h" />
     <ClInclude Include="src\MScene.h" />
     <ClInclude Include="src\MPipeline.h" />

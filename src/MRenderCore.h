@@ -3,21 +3,7 @@
 #include "MScene.h"
 #include "MInterface.h"
 #include "MAudio.h"
-#define GEOMETRY_PASS 0
-#define CACHE_VIEWER_PASS 1
-#define DEFERRED_PASS 2
-#define INJECTOR_PASS 3
-#define PREFILTER_PASS 4
-#define FILTER_PASS 5
-#define FORWARD_PASS 6
-#define TAAU_PASS 7
-#define ASSEMBLE_PASS 8
-#define EASU_PASS 9
-#define RCAS_PASS 10
-#define INTERFACEPRE_PASS 11
-#define INTERFACE_PASS 12
-#define FONT_PASS 13
-#define FRAME0_PASS 14
+#include "MRenderPass.h"
 class MRenderCore
 {
 public:
@@ -46,7 +32,7 @@ public:
 	MPipeline* interfacePipeline;
 	MPipeline* fontPipeline;
 	MPipeline* frame0Pipeline;
-	vector<VkCommandBuffer*> pCmdBuffers;
+	std::vector<std::unique_ptr<IRenderPass>> renderPasses;
 
 	static vector<objLoader::Material> materialArray;
 	static vector<VkImageView> textureArrayViews;

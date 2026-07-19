@@ -123,11 +123,6 @@ MRenderCore::MRenderCore(string m_scenePath, string m_interfacePath)
 	axis = new objLoader("res/model/axis/axis.obj");
 
 	createSwapChain();
-	for (int i = 0; i < 15; i++) {
-		VkCommandBuffer* cmdBuffer = new VkCommandBuffer;
-		createCommandBuffer(cmdBuffer);
-		pCmdBuffers.push_back(cmdBuffer);
-	}
 
 	createDescriptorSetLayout(&MPipeline::universalDescriptorSetLayout);
 	createDescriptorPool(&MPipeline::universalDescriptorPool);
@@ -388,10 +383,14 @@ MRenderCore::MRenderCore(string m_scenePath, string m_interfacePath)
 	transitionImageLayout(taauPipeline->colorAttachmentImages[0], 1, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	transitionImageLayout(taauPipeline->colorAttachmentImages[1], 1, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	transitionImageLayout(taauPipeline->colorAttachmentImages[2], 1, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+	renderPasses = createDefaultRenderPasses();
 }
 
 MRenderCore::~MRenderCore()
 {
+	renderPasses.clear();
+
 	for (VkAccelerationStructureKHR* accelerationStructure : MRenderCore::asPool) {
 		vkDestroyAccelerationStructureKHR(device, *accelerationStructure, nullptr);
 	}
@@ -479,241 +478,13 @@ void MRenderCore::drawFrame()
 	}
 	updateUniform();
 	p_interface->executionTrigger();
-	uint64_t offsets = 0;
 	uint32_t imageIndex;
 	vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores, VK_NULL_HANDLE, &imageIndex);
 
-	//geometry pass
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[GEOMETRY_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[GEOMETRY_PASS], &skyboxSamplerPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxSamplerPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &skyboxSamplerPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[GEOMETRY_PASS], 0, 1, &cubeVertexBuffer, &offsets);
-	glm::mat4 P_lookat = proj * lookat;
-	vkCmdPushConstants(*pCmdBuffers[GEOMETRY_PASS], MPipeline::universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, PUSH_CONSTS_SIZE, glm::value_ptr(P_lookat));
-	vkCmdDraw(*pCmdBuffers[GEOMETRY_PASS], 36, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[GEOMETRY_PASS]);
-
-	vkCmdBeginRendering(*pCmdBuffers[GEOMETRY_PASS], &UILayerPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, UILayerPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &UILayerPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[GEOMETRY_PASS], 0, 1, &axis->vertexBuffer, &offsets);
-	glm::mat4 UIMVP = proj * lookat * glm::translate(glm::mat4(1), cameraDirection) * glm::translate(glm::mat4(1), glm::vec3(0)) * glm::rotate(glm::mat4(1), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::scale(glm::mat4(1), glm::vec3(0.01));
-	vkCmdPushConstants(*pCmdBuffers[GEOMETRY_PASS], MPipeline::universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, PUSH_CONSTS_SIZE, glm::value_ptr(UIMVP));
-	vkCmdDraw(*pCmdBuffers[GEOMETRY_PASS], axis->vertexStream.size(), 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[GEOMETRY_PASS]);
-
-	vkCmdBeginRendering(*pCmdBuffers[GEOMETRY_PASS], &geometryPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[GEOMETRY_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, geometryPipeline->pipeline);
-	scene->drawScene(*pCmdBuffers[GEOMETRY_PASS], geometryPipeline, MPipeline::universalPipelineLayout);
-	vkCmdEndRendering(*pCmdBuffers[GEOMETRY_PASS]);
-	endRecordSubmit(pCmdBuffers[GEOMETRY_PASS], &imageAvailableSemaphores, nullptr);
-
-	//cacheViewer
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[CACHE_VIEWER_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[CACHE_VIEWER_PASS], &cacheViewerPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[CACHE_VIEWER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, cacheViewerPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[CACHE_VIEWER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &cacheViewerPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[CACHE_VIEWER_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	universalPushConst cacheViewerPushConst;
-	cacheViewerPushConst.v4 = glm::vec4(invCameraPos, RADIANCE_CACHE_RAD);
-	cacheViewerPushConst.v4_2 = glm::vec4(CHUNK_SIZE);
-	cacheViewerPushConst.m4 = glm::mat4(1);
-	vkCmdPushConstants(*pCmdBuffers[CACHE_VIEWER_PASS], cacheViewerPipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &cacheViewerPushConst);
-	vkCmdDraw(*pCmdBuffers[CACHE_VIEWER_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[CACHE_VIEWER_PASS]);
-	endRecordSubmit(pCmdBuffers[CACHE_VIEWER_PASS], nullptr, nullptr);
-
-	//Deferred
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[DEFERRED_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[DEFERRED_PASS], &deferredPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[DEFERRED_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, deferredPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[DEFERRED_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &deferredPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[DEFERRED_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	universalPushConst deferredPushConst;
-	deferredPushConst.v4 = glm::vec4(INNER_WIDTH, INNER_HEIGHT, SSP, SSP_2);
-	deferredPushConst.v4_2 = glm::vec4(RADIANCE_CACHE_RAD, CHUNK_SIZE, NEAR_PLANE, FAR_PLANE);
-	deferredPushConst.m4 = glm::mat4(invCameraPos == historicalInvCameraPos ? 0 : 1);
-	vkCmdPushConstants(*pCmdBuffers[DEFERRED_PASS], deferredPipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &deferredPushConst);
-	vkCmdDraw(*pCmdBuffers[DEFERRED_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[DEFERRED_PASS]);
-	endRecordSubmit(pCmdBuffers[DEFERRED_PASS], nullptr, nullptr);
-
-	//injector
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[INJECTOR_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[INJECTOR_PASS], &injectorPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[INJECTOR_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, injectorPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[INJECTOR_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &injectorPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[INJECTOR_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	universalPushConst injectorPushConst;
-	injectorPushConst.v4 = glm::vec4(invCameraPos, RADIANCE_CACHE_RAD);
-	injectorPushConst.v4_2 = glm::vec4(CHUNK_SIZE, 0, 0, 0);
-	injectorPushConst.m4 = glm::mat4(1);
-	vkCmdPushConstants(*pCmdBuffers[INJECTOR_PASS], injectorPipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &injectorPushConst);
-	vkCmdDraw(*pCmdBuffers[INJECTOR_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[INJECTOR_PASS]);
-	endRecordSubmit(pCmdBuffers[INJECTOR_PASS], nullptr, nullptr);
-
-	//preFilter
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[PREFILTER_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[PREFILTER_PASS], &preFilterPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[PREFILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, preFilterPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[PREFILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &preFilterPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[PREFILTER_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	universalPushConst preFilterPushConst;
-	preFilterPushConst.v4 = glm::vec4(INNER_WIDTH, INNER_HEIGHT, RAD, SIG);
-	preFilterPushConst.m4 = glm::mat4(1);
-	vkCmdPushConstants(*pCmdBuffers[PREFILTER_PASS], preFilterPipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &preFilterPushConst);
-	vkCmdDraw(*pCmdBuffers[PREFILTER_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[PREFILTER_PASS]);
-	endRecordSubmit(pCmdBuffers[PREFILTER_PASS], nullptr, nullptr);
-
-	//Filter
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[FILTER_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[FILTER_PASS], &filterPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[FILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, filterPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[FILTER_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &filterPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[FILTER_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	universalPushConst filterPushConst;
-	filterPushConst.v4 = glm::vec4(INNER_WIDTH, INNER_HEIGHT, RAD, SIG);
-	filterPushConst.m4 = glm::mat4(1);
-	vkCmdPushConstants(*pCmdBuffers[FILTER_PASS], filterPipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &filterPushConst);
-	vkCmdDraw(*pCmdBuffers[FILTER_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[FILTER_PASS]);
-	endRecordSubmit(pCmdBuffers[FILTER_PASS], nullptr, nullptr);
-
-
-
-	//Forward
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[FORWARD_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[FORWARD_PASS], &waterLayerPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[FORWARD_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, waterLayerPipeline->pipeline);
-	scene->drawForward(*pCmdBuffers[FORWARD_PASS], waterLayerPipeline, MPipeline::universalPipelineLayout);
-	vkCmdEndRendering(*pCmdBuffers[FORWARD_PASS]);
-	endRecordSubmit(pCmdBuffers[FORWARD_PASS], nullptr, nullptr);
-
-
-	//TAAU
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[TAAU_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[TAAU_PASS], &taauPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[TAAU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, taauPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[TAAU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &taauPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[TAAU_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	universalPushConst taauPushConst;
-	taauPushConst.v4 = glm::vec4(INNER_WIDTH, INNER_HEIGHT, currentSubPixel, 0);
-	taauPushConst.m4 = glm::mat4(historicalVP);
-	vkCmdPushConstants(*pCmdBuffers[TAAU_PASS], taauPipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &taauPushConst);
-	vkCmdDraw(*pCmdBuffers[TAAU_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[TAAU_PASS]);
-	endRecordSubmit(pCmdBuffers[TAAU_PASS], nullptr, nullptr);
-
-	//Assemble
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[ASSEMBLE_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[ASSEMBLE_PASS], &assemblePipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[ASSEMBLE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, assemblePipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[ASSEMBLE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &assemblePipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[ASSEMBLE_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	vkCmdDraw(*pCmdBuffers[ASSEMBLE_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[ASSEMBLE_PASS]);
-	endRecordSubmit(pCmdBuffers[ASSEMBLE_PASS], nullptr, nullptr);
-
-	//EASU
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[EASU_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[EASU_PASS], &easuPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[EASU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, easuPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[EASU_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &easuPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[EASU_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	universalPushConst easuPushConst;
-	easuPushConst.v4 = glm::vec4(float(INNER_WIDTH) * 2 / float(OUTER_WIDTH), float(INNER_HEIGHT) * 2 / float(OUTER_HEIGHT), 0, 0);
-	easuPushConst.m4 = glm::mat4(1);
-	vkCmdPushConstants(*pCmdBuffers[EASU_PASS], easuPipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &easuPushConst);
-	vkCmdDraw(*pCmdBuffers[EASU_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[EASU_PASS]);
-	endRecordSubmit(pCmdBuffers[EASU_PASS], nullptr, nullptr);
-
-	//RCAS
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[RCAS_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[RCAS_PASS], &rcasPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[RCAS_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, rcasPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[RCAS_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &rcasPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[RCAS_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	universalPushConst pushConst;
-	pushConst.v4 = glm::vec4(SHARPNESS, 0, 0, 0);
-	pushConst.m4 = glm::mat4(1);
-	vkCmdPushConstants(*pCmdBuffers[RCAS_PASS], rcasPipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &pushConst);
-	vkCmdDraw(*pCmdBuffers[RCAS_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[RCAS_PASS]);
-	endRecordSubmit(pCmdBuffers[RCAS_PASS], nullptr, nullptr);
-
-	//InterfacePre
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[INTERFACEPRE_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[INTERFACEPRE_PASS], &interfacePrePipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[INTERFACEPRE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, interfacePrePipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[INTERFACEPRE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &interfacePrePipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[INTERFACEPRE_PASS], 0, 1, &p_interface->interfaceVertexBuffer, &offsets);
-	universalPushConst interfacePrePushConst;
-	interfacePrePushConst.v4 = glm::vec4(OUTER_WIDTH, OUTER_HEIGHT, 20, p_interface->page);
-	interfacePrePushConst.m4 = glm::mat4(1);
-	vkCmdPushConstants(*pCmdBuffers[INTERFACEPRE_PASS], interfacePrePipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &interfacePrePushConst);
-	vkCmdDraw(*pCmdBuffers[INTERFACEPRE_PASS], p_interface->interfaceVertexStream.size() / 11, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[INTERFACEPRE_PASS]);
-	endRecordSubmit(pCmdBuffers[INTERFACEPRE_PASS], nullptr, nullptr);
-
-	//Interface
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[INTERFACE_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[INTERFACE_PASS], &interfacePipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[INTERFACE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, interfacePipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[INTERFACE_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &interfacePipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[INTERFACE_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	vkCmdPushConstants(*pCmdBuffers[INTERFACE_PASS], interfacePipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &interfacePrePushConst);
-	vkCmdDraw(*pCmdBuffers[INTERFACE_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[INTERFACE_PASS]);
-	endRecordSubmit(pCmdBuffers[INTERFACE_PASS], nullptr, nullptr);
-
-	//Font
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[FONT_PASS]);
-	vkCmdBeginRendering(*pCmdBuffers[FONT_PASS], &fontPipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[FONT_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, fontPipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[FONT_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &fontPipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[FONT_PASS], 0, 1, &p_interface->textVertexBuffer, &offsets);
-	std::vector<float> fontPushConst;
-	fontPushConst.push_back(MInterface::page);
-	fontPushConst.insert(fontPushConst.end(), MInterface::textDisableTable.begin(), MInterface::textDisableTable.end());
-	vkCmdPushConstants(*pCmdBuffers[FONT_PASS], fontPipeline->universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, PUSH_CONSTS_SIZE, fontPushConst.data());
-	vkCmdDraw(*pCmdBuffers[FONT_PASS],p_interface->textVertexStream.size() / 11, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[FONT_PASS]);
-	endRecordSubmit(pCmdBuffers[FONT_PASS], nullptr, nullptr);
-
-	//Frame0
-	vkQueueWaitIdle(graphicsPresentQueue);
-	beginRecord(pCmdBuffers[FRAME0_PASS]);
-	frame0Pipeline->updateAttachments(swapChainImageViews[imageIndex]);
-	vkCmdBeginRendering(*pCmdBuffers[FRAME0_PASS], &frame0Pipeline->renderingInfo);
-	vkCmdBindPipeline(*pCmdBuffers[FRAME0_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, frame0Pipeline->pipeline);
-	vkCmdBindDescriptorSets(*pCmdBuffers[FRAME0_PASS], VK_PIPELINE_BIND_POINT_GRAPHICS, MPipeline::universalPipelineLayout, 0, 1, &frame0Pipeline->descriptorSets, 0, nullptr);
-	vkCmdBindVertexBuffers(*pCmdBuffers[FRAME0_PASS], 0, 1, &quadVertexBuffer, &offsets);
-	universalPushConst frame0PushConst;
-	frame0PushConst.v4 = glm::vec4(displayID, UIEnable, frame0Pipeline->image2DViews.size(), 0);
-	frame0PushConst.m4 = glm::mat4(1);
-	vkCmdPushConstants(*pCmdBuffers[FRAME0_PASS], MPipeline::universalPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(universalPushConst), &frame0PushConst);
-	vkCmdDraw(*pCmdBuffers[FRAME0_PASS], 6, 1, 0, 0);
-	vkCmdEndRendering(*pCmdBuffers[FRAME0_PASS]);
-	transitionImageLayout(swapChainImages[imageIndex], 1, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-	endRecordSubmit(pCmdBuffers[FRAME0_PASS], nullptr, nullptr);
+	RenderFrameContext frameContext{ *this, imageIndex };
+	for (const auto& pass : renderPasses) {
+		pass->execute(frameContext);
+	}
 
 	VkPresentInfoKHR presentInfo{};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
