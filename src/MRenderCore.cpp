@@ -1,5 +1,6 @@
 #include "MRenderCore.h"
 #include "MCameraTrack.h"
+#include <utility>
 vector<objLoader::Material> MRenderCore::materialArray;
 vector<VkImageView> MRenderCore::textureArrayViews;
 vector<VkImageView> MRenderCore::cubemapArrayViews;
@@ -184,213 +185,32 @@ MRenderCore::MRenderCore(string m_scenePath, string m_interfacePath)
 	createVertexBuffer(&sampleStorageBuffer, &sampleStorageMemory, &pSphereSamples, sizeof(sphereSamples));
 
 
-	vector<VkFormat> geometryFormats = { VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT };
-	geometryPipeline = new MPipeline(0, "shaders/geometry.task", "shaders/geometry.mesh", "shaders/geometry.frag", 3);
-	geometryPipeline->colorAttachmentFormats = geometryFormats;
-	geometryPipeline->pVertexBuffer = &objLoader::objReferenceBuffer;
-	geometryPipeline->pStorageBuffer = &scene->sceneInstanceBuffer;
-	geometryPipeline->image2DViews = textureArrayViews;
-	geometryPipeline->TLAS = &scene->TLAS;
-	geometryPipeline->TLASBuffer = &scene->TLASBuffer;
-	geometryPipeline->createPipeline();
+	RenderSetupContext setupContext{
+		*scene,
+		*p_interface,
+		*axis,
+		cubeVertexBuffer,
+		quadVertexBuffer,
+		sampleStorageBuffer,
+		textureArrayViews,
+		cubemapArrayViews,
+		{
+			gHistoricalDirectView,
+			gHistoricalIndirectView,
+			gHistoricalTaauView,
+			gHistoricalTaauPositionView,
+			gHistoricalTaauNormalView
+		},
+		{ indirectCacheView_1, indirectCacheView_2 }
+	};
 
-	UILayerPipeline = new MPipeline("shaders/UI.vert", "shaders/UI.frag", 1);
-	UILayerPipeline->image2DViews = textureArrayViews;
-	UILayerPipeline->TLAS = &scene->TLAS;
-	UILayerPipeline->TLASBuffer = &scene->TLASBuffer;
-	UILayerPipeline->createPipeline();
-	skyboxSamplerPipeline = new MPipeline("shaders/skyboxSampler.vert", "shaders/skyboxSampler.frag", 1);
-	skyboxSamplerPipeline->image2DViews = textureArrayViews;
-	skyboxSamplerPipeline->imageCubeViews = cubemapArrayViews;
-	skyboxSamplerPipeline->TLAS = &scene->TLAS;
-	skyboxSamplerPipeline->TLASBuffer = &scene->TLASBuffer;
-	skyboxSamplerPipeline->createPipeline();
-
-	vector<VkImageView> cacheViewerResource;
-	cacheViewerResource.push_back(geometryPipeline->colorAttachmentViews[0]);
-	cacheViewerResource.push_back(geometryPipeline->colorAttachmentViews[1]);
-	cacheViewerPipeline = new MPipeline("shaders/screen.vert", "shaders/cacheViewer.frag", 2);
-	cacheViewerPipeline->image2DViews = cacheViewerResource;
-	cacheViewerPipeline->TLAS = &scene->TLAS;
-	cacheViewerPipeline->TLASBuffer = &scene->TLASBuffer;
-	cacheViewerPipeline->indirectCacheView_1 = indirectCacheView_1;
-	cacheViewerPipeline->indirectCacheView_2 = indirectCacheView_2;
-	cacheViewerPipeline->createPipeline();
-
-	vector<VkImageView> deferredResource = geometryPipeline->colorAttachmentViews;
-	deferredResource.push_back(gHistoricalTaauPositionView);
-	deferredResource.push_back(gHistoricalTaauNormalView);
-	deferredResource.push_back(gHistoricalDirectView);
-	deferredResource.push_back(gHistoricalIndirectView);
-	deferredResource.push_back(cacheViewerPipeline->colorAttachmentViews[1]);
-	deferredResource.insert(deferredResource.end(), textureArrayViews.begin(), textureArrayViews.end());
-	deferredPipeline = new MPipeline("shaders/screen.vert", "shaders/deferred.frag", 2);
-	deferredPipeline->image2DViews = deferredResource;
-	deferredPipeline->pVertexBuffer = &scene->sceneVertexBuffer;
-	deferredPipeline->pStorageBuffer = &sampleStorageBuffer;
-	deferredPipeline->imageCubeViews = cubemapArrayViews;
-	deferredPipeline->TLAS = &scene->TLAS;
-	deferredPipeline->TLASBuffer = &scene->TLASBuffer;
-	deferredPipeline->indirectCacheView_1 = indirectCacheView_1;
-	deferredPipeline->indirectCacheView_2 = indirectCacheView_2;
-	deferredPipeline->createPipeline();
-
-	vector<VkImageView> injectorResource;
-	injectorResource.push_back(geometryPipeline->colorAttachmentViews[0]);
-	injectorResource.push_back(geometryPipeline->colorAttachmentViews[1]);
-	injectorResource.push_back(deferredPipeline->colorAttachmentViews[1]);
-	injectorPipeline = new MPipeline("shaders/screen.vert", "shaders/injector.frag", 1);
-	injectorPipeline->image2DViews = injectorResource;
-	injectorPipeline->TLAS = &scene->TLAS;
-	injectorPipeline->TLASBuffer = &scene->TLASBuffer;
-	injectorPipeline->indirectCacheView_1 = indirectCacheView_1;
-	injectorPipeline->indirectCacheView_2 = indirectCacheView_2;
-	injectorPipeline->createPipeline();
-
-	vector<VkImageView> preFilterResource = geometryPipeline->colorAttachmentViews;
-	preFilterResource.push_back(deferredPipeline->colorAttachmentViews[0]);
-	preFilterResource.push_back(deferredPipeline->colorAttachmentViews[1]);
-	preFilterPipeline = new MPipeline("shaders/screen.vert", "shaders/preFilter.frag", 2);
-	preFilterPipeline->image2DViews = preFilterResource;
-	preFilterPipeline->TLAS = &scene->TLAS;
-	preFilterPipeline->TLASBuffer = &scene->TLASBuffer;
-	preFilterPipeline->createPipeline();
-
-	vector<VkImageView> filterResource = geometryPipeline->colorAttachmentViews;
-	filterResource.push_back(preFilterPipeline->colorAttachmentViews[0]);
-	filterResource.push_back(preFilterPipeline->colorAttachmentViews[1]);
-	filterPipeline = new MPipeline("shaders/screen.vert", "shaders/filter.frag", 1);
-	filterPipeline->image2DViews = filterResource;
-	filterPipeline->TLAS = &scene->TLAS;
-	filterPipeline->TLASBuffer = &scene->TLASBuffer;
-	filterPipeline->createPipeline();
-
-
-	waterLayerPipeline = new MPipeline("shaders/waterLayer.vert", "shaders/waterLayer.frag", 1);
-	waterLayerPipeline->image2DViews[0] = geometryPipeline->colorAttachmentViews[0];
-	waterLayerPipeline->image2DViews.push_back(filterPipeline->colorAttachmentViews[0]);
-	waterLayerPipeline->image2DViews.insert(waterLayerPipeline->image2DViews.end(), textureArrayViews.begin(), textureArrayViews.end());
-	waterLayerPipeline->depthView = geometryPipeline->depthView;
-	waterLayerPipeline->depthAttachmentLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-	waterLayerPipeline->pVertexBuffer = &scene->sceneVertexBuffer;
-	waterLayerPipeline->pStorageBuffer = &sampleStorageBuffer;
-	waterLayerPipeline->imageCubeViews = cubemapArrayViews;
-	waterLayerPipeline->TLAS = &scene->TLAS;
-	waterLayerPipeline->TLASBuffer = &scene->TLASBuffer;
-	waterLayerPipeline->createPipeline();
-
-	vector<VkFormat> taauFormats = { VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT };
-	vector<VkImageView> taauResource;
-	taauResource.push_back(geometryPipeline->colorAttachmentViews[0]);
-	taauResource.push_back(geometryPipeline->colorAttachmentViews[1]);
-	taauResource.push_back(filterPipeline->colorAttachmentViews[0]);
-	taauResource.push_back(gHistoricalTaauView);
-	taauResource.push_back(gHistoricalTaauPositionView);
-	taauResource.push_back(gHistoricalTaauNormalView);
-	taauPipeline = new MPipeline("shaders/screen.vert", "shaders/taau.frag", 3);
-	taauPipeline->colorAttachmentFormats = taauFormats;
-	taauPipeline->image2DViews = taauResource;
-	taauPipeline->pipelineWidth = INNER_WIDTH * 2;
-	taauPipeline->pipelineHeight = INNER_HEIGHT * 2;
-	taauPipeline->TLAS = &scene->TLAS;
-	taauPipeline->TLASBuffer = &scene->TLASBuffer;
-	taauPipeline->createPipeline();
-
-	vector<VkImageView> assembleResource;
-	assembleResource.push_back(taauPipeline->colorAttachmentViews[0]);
-	assembleResource.push_back(skyboxSamplerPipeline->colorAttachmentViews[0]);
-	assembleResource.push_back(waterLayerPipeline->colorAttachmentViews[0]);
-	assemblePipeline = new MPipeline("shaders/screen.vert", "shaders/assemble.frag", 1);
-	assemblePipeline->image2DViews = assembleResource;
-	assemblePipeline->pipelineWidth = INNER_WIDTH * 2;
-	assemblePipeline->pipelineHeight = INNER_HEIGHT * 2;
-	assemblePipeline->TLAS = &scene->TLAS;
-	assemblePipeline->TLASBuffer = &scene->TLASBuffer;
-	assemblePipeline->createPipeline();
-
-	vector<VkImageView> easuResource = assemblePipeline->colorAttachmentViews;
-	easuPipeline = new MPipeline("shaders/screen.vert", "shaders/easu.frag", 1);
-	easuPipeline->image2DViews = easuResource;
-	easuPipeline->pipelineWidth = OUTER_WIDTH;
-	easuPipeline->pipelineHeight = OUTER_HEIGHT;
-	easuPipeline->TLAS = &scene->TLAS;
-	easuPipeline->TLASBuffer = &scene->TLASBuffer;
-	easuPipeline->createPipeline();
-
-	vector<VkImageView> rcasResource = easuPipeline->colorAttachmentViews;
-	rcasPipeline = new MPipeline("shaders/screen.vert", "shaders/rcas.frag", 1);
-	rcasPipeline->image2DViews = rcasResource;
-	rcasPipeline->pipelineWidth = OUTER_WIDTH;
-	rcasPipeline->pipelineHeight = OUTER_HEIGHT;
-	rcasPipeline->TLAS = &scene->TLAS;
-	rcasPipeline->TLASBuffer = &scene->TLASBuffer;
-	rcasPipeline->createPipeline();
-
-	vector<VkImageView> interfacePreResource = rcasPipeline->colorAttachmentViews;
-	interfacePreResource.insert(interfacePreResource.end(), MInterface::interfaceTextureArrayViews.begin(), MInterface::interfaceTextureArrayViews.end());
-	interfacePrePipeline = new MPipeline("shaders/interfacePre.vert", "shaders/interfacePre.frag", 2);
-	interfacePrePipeline->image2DViews = interfacePreResource;
-	interfacePrePipeline->pipelineWidth = OUTER_WIDTH;
-	interfacePrePipeline->pipelineHeight = OUTER_HEIGHT;
-	interfacePrePipeline->TLAS = &scene->TLAS;
-	interfacePrePipeline->TLASBuffer = &scene->TLASBuffer;
-	interfacePrePipeline->createPipeline();
-
-	vector<VkImageView> interfaceResource = interfacePrePipeline->colorAttachmentViews;
-	interfacePipeline = new MPipeline("shaders/screen.vert", "shaders/interface.frag", 1);
-	interfacePipeline->image2DViews = interfaceResource;
-	interfacePipeline->pipelineWidth = OUTER_WIDTH;
-	interfacePipeline->pipelineHeight = OUTER_HEIGHT;
-	interfacePipeline->TLAS = &scene->TLAS;
-	interfacePipeline->TLASBuffer = &scene->TLASBuffer;
-	interfacePipeline->createPipeline();
-
-	fontPipeline = new MPipeline("shaders/font.vert", "shaders/font.frag", 1);
-	fontPipeline->image2DViews = MInterface::fontTextureArrayViews;
-	fontPipeline->pipelineWidth = OUTER_WIDTH;
-	fontPipeline->pipelineHeight = OUTER_HEIGHT;
-	fontPipeline->TLAS = &scene->TLAS;
-	fontPipeline->TLASBuffer = &scene->TLASBuffer;
-	fontPipeline->createPipeline();
-
-	vector<VkImageView> frame0Resource = geometryPipeline->colorAttachmentViews;
-	frame0Resource.push_back(skyboxSamplerPipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(UILayerPipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(filterPipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(easuPipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(rcasPipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(taauPipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(taauPipeline->colorAttachmentViews[1]);
-	frame0Resource.push_back(taauPipeline->colorAttachmentViews[2]);
-	frame0Resource.push_back(cacheViewerPipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(cacheViewerPipeline->colorAttachmentViews[1]);
-	frame0Resource.push_back(deferredPipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(deferredPipeline->colorAttachmentViews[1]);
-	frame0Resource.push_back(waterLayerPipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(interfacePipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(assemblePipeline->colorAttachmentViews[0]);
-	frame0Resource.push_back(fontPipeline->colorAttachmentViews[0]);
-	frame0Pipeline = new MPipeline("shaders/screen.vert", "shaders/frame0.frag");
-	frame0Pipeline->image2DViews = frame0Resource;
-	frame0Pipeline->pipelineWidth = OUTER_WIDTH;
-	frame0Pipeline->pipelineHeight = OUTER_HEIGHT;
-	frame0Pipeline->TLAS = &scene->TLAS;
-	frame0Pipeline->TLASBuffer = &scene->TLASBuffer;
-	frame0Pipeline->createPipeline();
-
-	transitionImageLayout(deferredPipeline->colorAttachmentImages[0], 1, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-	transitionImageLayout(deferredPipeline->colorAttachmentImages[1], 1, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-	transitionImageLayout(taauPipeline->colorAttachmentImages[0], 1, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-	transitionImageLayout(taauPipeline->colorAttachmentImages[1], 1, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-	transitionImageLayout(taauPipeline->colorAttachmentImages[2], 1, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-	renderPasses = createDefaultRenderPasses();
+	RenderPassBuildResult passBuildResult = createDefaultRenderPasses(setupContext);
+	frameHistorySources = passBuildResult.historySources;
+	renderPasses = std::move(passBuildResult.passes);
 }
 
 MRenderCore::~MRenderCore()
 {
-	renderPasses.clear();
-
 	for (VkAccelerationStructureKHR* accelerationStructure : MRenderCore::asPool) {
 		vkDestroyAccelerationStructureKHR(device, *accelerationStructure, nullptr);
 	}
@@ -443,19 +263,23 @@ MRenderCore::~MRenderCore()
 	pipelinePool.clear();
 	asPool.clear();
 
+	// MPipeline handles stored in the pools above point into pass-owned objects,
+	// so the pass container must outlive Vulkan handle destruction.
+	renderPasses.clear();
+
 	delete scene;
 	delete p_interface;
 	delete audio;
 }
 
-void MRenderCore::updateUniform()
+deferredUniformBuffer MRenderCore::updateUniform()
 {
 	view = glm::translate(glm::mat4(1), invCameraPos);
 	lookat = glm::lookAt(glm::vec3(0), cameraDirection, glm::vec3(0.0f, 1.0f, 0.0f));
 	proj = glm::perspective(glm::radians(FOV), swapChainExtent.width / (float)swapChainExtent.height, NEAR_PLANE, FAR_PLANE);
 	proj[1][1] *= -1;
 
-	deferredUniformBuffer deferredUbo;
+	deferredUniformBuffer deferredUbo{};
 	deferredUbo.cameraPos = -invCameraPos;
 	deferredUbo.historicalVP = historicalVP;
 	deferredUbo.runingTime = runingTime;
@@ -465,8 +289,7 @@ void MRenderCore::updateUniform()
 	for (int i = 0; i < scene->lightInfos.size(); i++) {
 		deferredUbo.lightInfos[i] = glm::vec4(scene->lightInfos[i], 0);
 	}
-	updateUniformBuffer(deferredPipeline->uniformBuffersMapped, &deferredUbo);
-	updateUniformBuffer(waterLayerPipeline->uniformBuffersMapped, &deferredUbo);
+	return deferredUbo;
 }
 
 void MRenderCore::drawFrame()
@@ -476,12 +299,12 @@ void MRenderCore::drawFrame()
 		invCameraPos = MCameraTrack::MCTinvCameraPos;
 		cameraDirection = MCameraTrack::MCTcameraDirection;
 	}
-	updateUniform();
+	deferredUniformBuffer sceneUniform = updateUniform();
 	p_interface->executionTrigger();
 	uint32_t imageIndex;
 	vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores, VK_NULL_HANDLE, &imageIndex);
 
-	RenderFrameContext frameContext{ *this, imageIndex };
+	RenderFrameContext frameContext{ imageIndex, 0, &sceneUniform };
 	for (const auto& pass : renderPasses) {
 		pass->execute(frameContext);
 	}
@@ -497,11 +320,11 @@ void MRenderCore::drawFrame()
 
 	vkQueuePresentKHR(graphicsPresentQueue, &presentInfo);
 
-	copyImage2D(&gHistoricalDirect, &deferredPipeline->colorAttachmentImages[0], INNER_WIDTH, INNER_HEIGHT);
-	copyImage2D(&gHistoricalIndirect, &deferredPipeline->colorAttachmentImages[1], INNER_WIDTH, INNER_HEIGHT);
-	copyImage2D(&gHistoricalTaau, &taauPipeline->colorAttachmentImages[0], INNER_WIDTH * 2, INNER_HEIGHT * 2);
-	copyImage2D(&gHistoricalTaauPosition, &taauPipeline->colorAttachmentImages[1], INNER_WIDTH * 2, INNER_HEIGHT * 2);
-	copyImage2D(&gHistoricalTaauNormal, &taauPipeline->colorAttachmentImages[2], INNER_WIDTH * 2, INNER_HEIGHT * 2);
+	copyImage2D(&gHistoricalDirect, &frameHistorySources.direct.image, INNER_WIDTH, INNER_HEIGHT);
+	copyImage2D(&gHistoricalIndirect, &frameHistorySources.indirect.image, INNER_WIDTH, INNER_HEIGHT);
+	copyImage2D(&gHistoricalTaau, &frameHistorySources.taau.image, INNER_WIDTH * 2, INNER_HEIGHT * 2);
+	copyImage2D(&gHistoricalTaauPosition, &frameHistorySources.taauPosition.image, INNER_WIDTH * 2, INNER_HEIGHT * 2);
+	copyImage2D(&gHistoricalTaauNormal, &frameHistorySources.taauNormal.image, INNER_WIDTH * 2, INNER_HEIGHT * 2);
 	glm::mat4 historicalP = glm::perspective(glm::radians(FOV), swapChainExtent.width / (float)swapChainExtent.height, NEAR_PLANE, FAR_PLANE);
 	historicalP[1][1] *= -1;
 	historicalVP = historicalP * glm::lookAt(glm::vec3(0), cameraDirection, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::translate(glm::mat4(1), invCameraPos);

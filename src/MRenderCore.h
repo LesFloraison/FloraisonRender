@@ -15,24 +15,8 @@ public:
 	string scenePath;
 	string interfacePath;
 
-	MPipeline* geometryPipeline;
-	MPipeline* skyboxSamplerPipeline;
-	MPipeline* UILayerPipeline;
-	MPipeline* deferredPipeline;
-	MPipeline* injectorPipeline;
-	MPipeline* cacheViewerPipeline;
-	MPipeline* preFilterPipeline;
-	MPipeline* filterPipeline;
-	MPipeline* waterLayerPipeline;
-	MPipeline* taauPipeline;
-	MPipeline* assemblePipeline;
-	MPipeline* easuPipeline;
-	MPipeline* rcasPipeline;
-	MPipeline* interfacePrePipeline;
-	MPipeline* interfacePipeline;
-	MPipeline* fontPipeline;
-	MPipeline* frame0Pipeline;
 	std::vector<std::unique_ptr<IRenderPass>> renderPasses;
+	FrameHistorySources frameHistorySources;
 
 	static vector<objLoader::Material> materialArray;
 	static vector<VkImageView> textureArrayViews;
@@ -80,7 +64,7 @@ public:
 	MRenderCore(string m_scenePath, string m_interfacePath);
 	static string aspectSelect(string m_selectorPath);
 	~MRenderCore();
-	void updateUniform();
+	deferredUniformBuffer updateUniform();
 	void drawFrame();
 };
 

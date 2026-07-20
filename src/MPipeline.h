@@ -50,13 +50,13 @@ public:
 	std::string meshPath = "";
 	std::vector<VkImageView> image2DViews;
 	std::vector<VkImageView> imageCubeViews;
-	VkImageView indirectCacheView_1;
-	VkImageView indirectCacheView_2;
+	VkImageView indirectCacheView_1 = VK_NULL_HANDLE;
+	VkImageView indirectCacheView_2 = VK_NULL_HANDLE;
 	VkBuffer* pVertexBuffer = nullptr;
 	VkBuffer* pStorageBuffer = nullptr;
 	std::vector<VkFormat> colorAttachmentFormats;
-	VkBuffer* TLASBuffer;
-	VkAccelerationStructureKHR* TLAS;
+	VkBuffer* TLASBuffer = nullptr;
+	VkAccelerationStructureKHR* TLAS = nullptr;
 	unsigned int pipelineWidth = INNER_WIDTH;
 	unsigned int pipelineHeight = INNER_HEIGHT;
 	VkAttachmentLoadOp depthAttachmentLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
