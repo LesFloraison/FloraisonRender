@@ -1,5 +1,106 @@
 #include "MPipeline.h"
 #include "MRenderCore.h"
+#include <algorithm>
+#include <process.h>
+
+namespace {
+namespace fs = std::filesystem;
+
+const fs::path SHADER_SOURCE_ROOT = "shaders";
+const fs::path SHADER_BINARY_ROOT = "spv";
+
+std::string shaderStageSuffix(const fs::path& sourcePath)
+{
+	std::string extension = sourcePath.extension().string();
+	std::transform(extension.begin(), extension.end(), extension.begin(),
+		[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+	if (extension == ".vert") return "Vert";
+	if (extension == ".frag") return "Frag";
+	if (extension == ".geom") return "Geom";
+	if (extension == ".task") return "Task";
+	if (extension == ".mesh") return "Mesh";
+	return "";
+}
+
+bool isSupportedShader(const fs::path& sourcePath)
+{
+	return !shaderStageSuffix(sourcePath).empty();
+}
+
+fs::path shaderBinaryPath(const fs::path& sourcePath)
+{
+	fs::path relativeSource;
+	std::error_code error;
+
+	if (sourcePath.is_absolute()) {
+		relativeSource = fs::relative(sourcePath, fs::absolute(SHADER_SOURCE_ROOT), error);
+	}
+	else {
+		relativeSource = sourcePath.lexically_normal().lexically_relative(SHADER_SOURCE_ROOT);
+	}
+
+	if (error || relativeSource.empty() || *relativeSource.begin() == "..") {
+		relativeSource = sourcePath.filename();
+	}
+
+	fs::path outputPath = SHADER_BINARY_ROOT / relativeSource.parent_path();
+	outputPath /= relativeSource.stem().string() + shaderStageSuffix(sourcePath) + ".spv";
+	return outputPath.lexically_normal();
+}
+
+int runShaderCompiler(const fs::path& validatorPath, const fs::path& sourcePath, const fs::path& outputPath)
+{
+	const std::wstring validator = validatorPath.wstring();
+	const std::wstring source = sourcePath.wstring();
+	const std::wstring output = outputPath.wstring();
+	const wchar_t* arguments[] = {
+		validator.c_str(),
+		L"-V",
+		source.c_str(),
+		L"-o",
+		output.c_str(),
+		nullptr
+	};
+	return static_cast<int>(_wspawnv(_P_WAIT, validator.c_str(), arguments));
+}
+
+bool installCompiledShader(const fs::path& temporaryPath, const fs::path& outputPath, std::string& errorMessage)
+{
+	fs::path backupPath = outputPath;
+	backupPath += ".bak";
+	std::error_code error;
+	fs::remove(backupPath, error);
+	error.clear();
+
+	const bool hadPreviousOutput = fs::exists(outputPath);
+	if (hadPreviousOutput) {
+		fs::rename(outputPath, backupPath, error);
+		if (error) {
+			errorMessage = "could not preserve previous output: " + error.message();
+			return false;
+		}
+	}
+
+	fs::rename(temporaryPath, outputPath, error);
+	if (error) {
+		errorMessage = "could not install compiled output: " + error.message();
+		if (hadPreviousOutput) {
+			std::error_code restoreError;
+			fs::rename(backupPath, outputPath, restoreError);
+			if (restoreError) {
+				errorMessage += "; could not restore previous output: " + restoreError.message();
+			}
+		}
+		return false;
+	}
+
+	if (hadPreviousOutput) {
+		fs::remove(backupPath, error);
+	}
+	return true;
+}
+}
 
 VkDescriptorPool MPipeline::universalDescriptorPool = NULL;
 VkDescriptorSetLayout MPipeline::universalDescriptorSetLayout = NULL;
@@ -40,7 +141,7 @@ static std::vector<char> readFile(const std::string& filename) {
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
 	if (!file.is_open()) {
-		throw std::runtime_error("failed to open file!");
+		throw std::runtime_error("failed to open file: " + filename);
 	}
 	size_t fileSize = (size_t)file.tellg();
 	std::vector<char> buffer(fileSize);
@@ -257,15 +358,12 @@ void MPipeline::createDescriptorSets()
 void MPipeline::createGraphicsPipeline()
 {
 	vector<VkPipelineShaderStageCreateInfo> shaderStages;
-	char absPath[4096] = { 0 };
-	_fullpath(absPath, "bin", 4096);
-	string validatorPath = absPath + string("/glslangValidator.exe");
 	VkShaderModule vertShaderModule = NULL;
 	VkShaderModule geomShaderModule = NULL;
 	VkShaderModule taskShaderModule = NULL;
 	VkShaderModule meshShaderModule = NULL;
 	if (meshPath == "") {
-		string vertSpvPath = "spv" + vertPath.substr(vertPath.find_last_of('/'), vertPath.length() - vertPath.find_last_of('/') - 5) + "Vert.spv";
+		string vertSpvPath = shaderBinaryPath(vertPath).string();
 		auto vertShaderCode = readFile(vertSpvPath);
 		vertShaderModule = createShaderModule(vertShaderCode);
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
@@ -276,7 +374,7 @@ void MPipeline::createGraphicsPipeline()
 		shaderStages.push_back(vertShaderStageInfo);
 
 		if (geomPath != "") {
-			string geomSpvPath = "spv" + vertPath.substr(vertPath.find_last_of('/'), vertPath.length() - vertPath.find_last_of('/') - 5) + "Geom.spv";
+			string geomSpvPath = shaderBinaryPath(geomPath).string();
 			auto geomShaderCode = readFile(geomSpvPath);
 			geomShaderModule = createShaderModule(geomShaderCode);
 			VkPipelineShaderStageCreateInfo geomShaderStageInfo{};
@@ -288,7 +386,7 @@ void MPipeline::createGraphicsPipeline()
 		}
 	}
 	else {
-		string taskSpvPath = "spv" + taskPath.substr(taskPath.find_last_of('/'), taskPath.length() - taskPath.find_last_of('/') - 5) + "Task.spv";
+		string taskSpvPath = shaderBinaryPath(taskPath).string();
 		auto taskShaderCode = readFile(taskSpvPath);
 		taskShaderModule = createShaderModule(taskShaderCode);
 		VkPipelineShaderStageCreateInfo taskShaderStageInfo{};
@@ -298,7 +396,7 @@ void MPipeline::createGraphicsPipeline()
 		taskShaderStageInfo.pName = "main";
 		shaderStages.push_back(taskShaderStageInfo);
 
-		string meshSpvPath = "spv" + meshPath.substr(meshPath.find_last_of('/'), meshPath.length() - meshPath.find_last_of('/') - 5) + "Mesh.spv";
+		string meshSpvPath = shaderBinaryPath(meshPath).string();
 		auto meshShaderCode = readFile(meshSpvPath);
 		meshShaderModule = createShaderModule(meshShaderCode);
 		VkPipelineShaderStageCreateInfo meshShaderStageInfo{};
@@ -309,7 +407,7 @@ void MPipeline::createGraphicsPipeline()
 		shaderStages.push_back(meshShaderStageInfo);
 	}
 
-	string fragSpvPath = "spv" + fragPath.substr(fragPath.find_last_of('/'), fragPath.length() - fragPath.find_last_of('/') - 5) + "Frag.spv";
+	string fragSpvPath = shaderBinaryPath(fragPath).string();
 	auto fragShaderCode = readFile(fragSpvPath);
 	VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
@@ -556,26 +654,120 @@ void MPipeline::updateAttachments(VkImageView curSwapchainView) {
 	renderingInfo.pDepthAttachment = &depthAttachmentInfo;
 }
 
-void MPipeline::shaderRecompile(std::string shaderPath)
+void MPipeline::shaderRecompile(std::string shaderPath, bool forceRecompile)
 {
-	char absPath[4096] = { 0 };
-	_fullpath(absPath, "bin", 4096);
-	string validatorPath = absPath + string("/glslangValidator.exe");
-	
-	for (const auto& entry : filesystem::recursive_directory_iterator(shaderPath)) {
-		if (filesystem::is_regular_file(entry)) {
-			std::string glslPath = entry.path().string();
-			std::string ext = entry.path().extension().string();
+	const fs::path sourceRoot(shaderPath);
+	const fs::path validatorPath = fs::absolute("bin") / "glslangValidator.exe";
+	unsigned int scannedCount = 0;
+	unsigned int compiledCount = 0;
+	unsigned int skippedCount = 0;
+	unsigned int failedCount = 0;
 
-			if (!ext.empty() && ext[0] == '.') {
-				ext.erase(0, 1);
-				ext[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(ext[0])));
+	if (!fs::is_directory(sourceRoot)) {
+		cout << "[shader] error: source directory not found: " << sourceRoot.string() << endl;
+		return;
+	}
+	if (!fs::is_regular_file(validatorPath)) {
+		cout << "[shader] error: compiler not found: " << validatorPath.string() << endl;
+		return;
+	}
+
+	std::error_code directoryError;
+	fs::create_directories(SHADER_BINARY_ROOT, directoryError);
+	if (directoryError) {
+		cout << "[shader] error: could not create output directory: "
+			<< SHADER_BINARY_ROOT.string() << " (" << directoryError.message() << ")" << endl;
+		return;
+	}
+
+	std::vector<fs::path> shaderSources;
+	try {
+		for (const auto& entry : fs::recursive_directory_iterator(sourceRoot)) {
+			if (entry.is_regular_file() && isSupportedShader(entry.path())) {
+				shaderSources.push_back(entry.path());
 			}
-			string spvPath = "spv" + glslPath.substr(glslPath.find_last_of('\\'), glslPath.length() - glslPath.find_last_of('\\') - 5) + ext + ".spv";
-			string compileCmd = validatorPath + " -V " + glslPath + " -o " + spvPath;
-			system(compileCmd.data());
 		}
 	}
+	catch (const fs::filesystem_error& error) {
+		cout << "[shader] error: could not scan source directory: " << error.what() << endl;
+		return;
+	}
+
+	std::sort(shaderSources.begin(), shaderSources.end());
+	for (const fs::path& sourcePath : shaderSources) {
+		++scannedCount;
+		const fs::path outputPath = shaderBinaryPath(sourcePath);
+		std::string compileReason;
+
+		if (forceRecompile) {
+			compileReason = "forced";
+		}
+		else if (!fs::exists(outputPath)) {
+			compileReason = "missing";
+		}
+		else {
+			std::error_code sourceTimeError;
+			std::error_code outputTimeError;
+			const auto sourceTime = fs::last_write_time(sourcePath, sourceTimeError);
+			const auto outputTime = fs::last_write_time(outputPath, outputTimeError);
+			if (sourceTimeError || outputTimeError) {
+				cout << "[shader] failed : " << sourcePath.string()
+					<< " (could not read modification time)" << endl;
+				++failedCount;
+				continue;
+			}
+			if (sourceTime > outputTime) {
+				compileReason = "modified";
+			}
+			else {
+				++skippedCount;
+				continue;
+			}
+		}
+
+		fs::create_directories(outputPath.parent_path(), directoryError);
+		if (directoryError) {
+			cout << "[shader] failed : " << sourcePath.string()
+				<< " (could not create output directory: " << directoryError.message() << ")" << endl;
+			++failedCount;
+			directoryError.clear();
+			continue;
+		}
+
+		fs::path temporaryPath = outputPath;
+		temporaryPath += ".tmp";
+		std::error_code removeError;
+		fs::remove(temporaryPath, removeError);
+
+		cout << "[shader] compile: " << sourcePath.string() << " -> "
+			<< outputPath.string() << " (" << compileReason << ")" << endl;
+		const int compileResult = runShaderCompiler(validatorPath, sourcePath, temporaryPath);
+
+		std::error_code sizeError;
+		const bool validTemporaryOutput = fs::is_regular_file(temporaryPath)
+			&& fs::file_size(temporaryPath, sizeError) > 0 && !sizeError;
+		if (compileResult != 0 || !validTemporaryOutput) {
+			cout << "[shader] failed : " << sourcePath.string()
+				<< " (compiler exit code " << compileResult << ")" << endl;
+			fs::remove(temporaryPath, removeError);
+			++failedCount;
+			continue;
+		}
+
+		std::string installError;
+		if (!installCompiledShader(temporaryPath, outputPath, installError)) {
+			cout << "[shader] failed : " << sourcePath.string() << " (" << installError << ")" << endl;
+			fs::remove(temporaryPath, removeError);
+			++failedCount;
+			continue;
+		}
+		++compiledCount;
+	}
+
+	cout << "[shader] summary: scanned=" << scannedCount
+		<< ", compiled=" << compiledCount
+		<< ", skipped=" << skippedCount
+		<< ", failed=" << failedCount << endl;
 }
 
 void MPipeline::createPipeline() {

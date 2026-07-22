@@ -162,7 +162,28 @@ void executeSingle(std::string executeString) {
 		iniLoader::writeIni(globalConfig, "res/config/cfg.ini");
 	}
 	else if (executeString.find("shader_recompile") == 0) {
-		MPipeline::shaderRecompile("shaders");
+		const size_t commandEnd = executeString.find(';');
+		const std::string shaderCommand = executeString.substr(0, commandEnd);
+		std::string argument = shaderCommand.substr(std::string("shader_recompile").size());
+		const size_t argumentStart = argument.find_first_not_of(" \t");
+		if (argumentStart == std::string::npos) {
+			argument.clear();
+		}
+		else {
+			argument.erase(0, argumentStart);
+			const size_t argumentEnd = argument.find_last_not_of(" \t");
+			argument.erase(argumentEnd + 1);
+		}
+
+		if (argument.empty()) {
+			MPipeline::shaderRecompile("shaders");
+		}
+		else if (argument == "all") {
+			MPipeline::shaderRecompile("shaders", true);
+		}
+		else {
+			cout << "usage: shader_recompile [all]" << endl;
+		}
 	}
 	else {
 		cout << "unknow execution " << "\"" << (executeString.find(";") == std::string::npos ? executeString : executeString.substr(0,executeString.find(";"))) << "\"" << endl;
