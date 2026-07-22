@@ -151,6 +151,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\CommandParser.cpp" />
+    <ClCompile Include="src\ConfigService.cpp" />
     <ClCompile Include="src\JSON.cpp" />
     <ClCompile Include="src\MAudio.cpp" />
     <ClCompile Include="src\iniLoader.cpp" />
@@ -172,6 +174,9 @@
     <ClCompile Include="src\VKmain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\CommandParser.h" />
+    <ClInclude Include="src\ConfigService.h" />
+    <ClInclude Include="src\Executor.h" />
     <ClInclude Include="src\JSON.h" />
     <ClInclude Include="src\MAudio.h" />
     <ClInclude Include="src\iniLoader.h" />

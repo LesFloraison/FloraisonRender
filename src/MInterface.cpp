@@ -2,11 +2,11 @@
 #include <GLFW/glfw3native.h>
 #include "MInterface.h"
 #include "MPipeline.h"
+#include "Executor.h"
 #include <ft2build.h>
 #include "JSON.h"
 #include FT_FREETYPE_H
 
-extern std::string consoleString;
 int leftDown;
 bool restartSignal = false;
 std::vector<VkImageView> MInterface::interfaceTextureArrayViews;
@@ -253,7 +253,7 @@ void MInterface::executionTrigger()
 					continue;
 				}
 				// execution may contain destructor, do not directly call
-				consoleString = tile.excuteString[tile.state];
+				enqueueCommand(tile.excuteString[tile.state], "interface");
 				tile.state++;
 				tile.state %= tile.excuteString.size();
 			}

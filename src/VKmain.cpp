@@ -13,6 +13,7 @@
 #include <functional>
 #include <chrono>
 #include <cstdlib>
+#include <memory>
 #include <vector>
 #include <array>
 #include <set>
@@ -25,9 +26,11 @@
 #include "MInterface.h"
 #include "MCameraTrack.h"
 #include "iniLoader.h"
+#include "ConfigService.h"
+#include "Executor.h"
 using namespace std;
 
-MRenderCore* renderCore;
+std::unique_ptr<MRenderCore> renderCore;
 
 INI_STRUCT globalConfig;
 int FULL_SCREEN = 0;
@@ -55,13 +58,17 @@ int displayID = -1;
 int debugVal;
 int currentSubPixel;
 
+void processRuntimeActions();
+
 int main() {
 	try
 	{
 		cameraDirection = glm::vec3(1.0f, 0.0f, 0.0f);
 		initVulkan();
 		mainLoop();
-		renderCore->p_interface->writeStateFile();
+		if (renderCore && renderCore->p_interface) {
+			renderCore->p_interface->writeStateFile();
+		}
 		executeSingle("save_config");
 		cleanup();
 		if (restartSignal) {
@@ -69,7 +76,7 @@ int main() {
 			main();
 		}
 	}
-	catch (runtime_error e)
+	catch (const std::exception& e)
 	{
 		std::cout << e.what() << std::endl;
 	}
@@ -77,12 +84,19 @@ int main() {
 
 void initVulkan()
 {
-	loadConfig("res/config/cfg.ini");
+	std::string configError;
+	if (!loadConfig(globalConfig, "res/config/cfg.ini", configError)) {
+		throw std::runtime_error(configError);
+	}
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	auto monitor = FULL_SCREEN == 0 ? nullptr : glfwGetPrimaryMonitor();
 	window = glfwCreateWindow(OUTER_WIDTH, OUTER_HEIGHT, "Vulkan", monitor, nullptr);
+	if (window == nullptr) {
+		throw std::runtime_error("failed to create GLFW window");
+	}
+	initializeExecutor({ []() { return renderCore.get(); }, &globalConfig });
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	executeScript("res/scripts/defaultScript.txt");
@@ -102,7 +116,43 @@ void initVulkan()
 
 	//MInterface* mi = new MInterface("res/interface/defaultInterface_16x10.txt");
 	string interfacePath =  MRenderCore::aspectSelect("res/interface/aspectSelector.txt");
-	renderCore = new MRenderCore("res/scenes/sponzaScene.txt", "res/interface/defaultInterface_16x9.txt");
+	renderCore = std::make_unique<MRenderCore>(
+		"res/scenes/sponzaScene.txt", "res/interface/defaultInterface_16x9.txt");
+	processRuntimeActions();
+}
+
+void processRuntimeActions()
+{
+	for (RuntimeAction& action : takeRuntimeActions()) {
+		if (action.type == RuntimeActionType::Exit) {
+			glfwSetWindowShouldClose(window, true);
+			continue;
+		}
+		if (!renderCore) {
+			std::cerr << "runtime: renderer is not available for reload" << std::endl;
+			continue;
+		}
+
+		std::string scenePath = renderCore->scenePath;
+		std::string interfacePath = renderCore->interfacePath;
+		if (action.type == RuntimeActionType::ReloadScene) {
+			scenePath = action.argument;
+		}
+		else if (action.type == RuntimeActionType::ReloadInterface) {
+			interfacePath = action.argument;
+		}
+
+		vkDeviceWaitIdle(device);
+		renderCore.reset();
+		try {
+			renderCore = std::make_unique<MRenderCore>(scenePath, interfacePath);
+		}
+		catch (const std::exception& error) {
+			std::cerr << "runtime: renderer reload failed: " << error.what() << std::endl;
+			glfwSetWindowShouldClose(window, true);
+			break;
+		}
+	}
 }
 
 void mainLoop()
@@ -124,6 +174,10 @@ void mainLoop()
 		glfwPollEvents();
 		processInput(window);
 		consoleProcess();
+		processRuntimeActions();
+		if (glfwWindowShouldClose(window) || !renderCore) {
+			break;
+		}
 		lastFrame = glfwGetTime();
 		if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
 			continue;
@@ -138,7 +192,8 @@ void mainLoop()
 
 void cleanup()
 {
-	delete renderCore;
+	shutdownExecutor();
+	renderCore.reset();
 
 	vkDestroySemaphore(device, imageAvailableSemaphores, nullptr);
 	vkDestroyCommandPool(device, commandPool, nullptr);

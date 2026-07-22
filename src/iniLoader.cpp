@@ -1,5 +1,7 @@
 ﻿#include "iniLoader.h"
 
+#include <utility>
+
 void iniLoader::loadIni(INI_STRUCT* ini, std::string path) {
 	std::map<std::string, std::map<std::string, std::string>> section_keyVaule;
 	std::ifstream file(path);
@@ -8,6 +10,9 @@ void iniLoader::loadIni(INI_STRUCT* ini, std::string path) {
 	if (file.is_open()) {
 		while (std::getline(file, line)) {
 			line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
+			if (line.empty() || line[0] == ';' || line[0] == '#') {
+				continue;
+			}
 			if (line[0] == '[') {
 				std::string section = line.substr(1, line.length() - 2);
 				std::map<std::string, std::string> key_value;
@@ -33,7 +38,8 @@ void iniLoader::editKey(INI_STRUCT* ini, std::string section, std::string key, s
 {
 	if ((*ini).find(section) == (*ini).end()) {
 		std::map<std::string, std::string> key_value;
-		(*ini).insert(std::make_pair(section, key_value));
+		key_value.insert(std::make_pair(key, value));
+		(*ini).insert(std::make_pair(section, std::move(key_value)));
 	}
 	else {
 		if ((*ini).find(section)->second.find(key) == (*ini).find(section)->second.end()) {
@@ -59,7 +65,7 @@ void iniLoader::deleteKey(INI_STRUCT* ini, std::string section, std::string key)
 	}
 }
 
-std::string iniLoader::readKey(INI_STRUCT ini, std::string section, std::string key)
+std::string iniLoader::readKey(const INI_STRUCT& ini, const std::string& section, const std::string& key)
 {
 	auto it_section = ini.find(section);
 	if (it_section != ini.end()) {
@@ -71,7 +77,7 @@ std::string iniLoader::readKey(INI_STRUCT ini, std::string section, std::string 
 	return std::string();
 }
 
-void iniLoader::writeIni(INI_STRUCT ini, std::string path)
+void iniLoader::writeIni(const INI_STRUCT& ini, const std::string& path)
 {
 	std::ofstream outfile(path);
 	std::string iniContent = std::string();

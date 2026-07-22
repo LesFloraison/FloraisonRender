@@ -8,8 +8,8 @@
 
 namespace iniLoader {
 	void loadIni(INI_STRUCT* ini, std::string);
-	void writeIni(INI_STRUCT ini, std::string path);
+	void writeIni(const INI_STRUCT& ini, const std::string& path);
 	void editKey(INI_STRUCT* ini, std::string section, std::string key, std::string value);
 	void deleteKey(INI_STRUCT* ini, std::string section, std::string key);
-	std::string readKey(INI_STRUCT ini, std::string section, std::string key);
+	std::string readKey(const INI_STRUCT& ini, const std::string& section, const std::string& key);
 }

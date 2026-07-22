@@ -183,11 +183,6 @@ void endRecordSubmit(VkCommandBuffer* pCmdBuffer, VkSemaphore* pWaitSemaphore, V
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
 void cul_mouseDir(glm::vec3* dir);
-void consoleInput();
-void consoleProcess();
-void executeSingle(std::string executeString);
-void executeScript(std::string scriptPath);
-void loadConfig(std::string iniPath);
 std::string getHardWareInfo();
 
 inline glm::vec2 toVec2(std::vector<float> data) {
